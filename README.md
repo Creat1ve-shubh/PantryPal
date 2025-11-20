@@ -1,28 +1,195 @@
-# PantryPal# PantryPal
+# PantryPal
 
+Modern multi-tenant inventory, billing, and store operations platform.
 
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Core Features](#core-features)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [Environment Variables](#environment-variables)
+- [NPM Scripts](#npm-scripts)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [License](#license)
+- [Support](#support)
+
+---
+
+## Overview
+
+PantryPal streamlines inventory tracking, product lifecycle (manufacture → expiry), billing, user onboarding via invitations, and store-specific permissions inside organizations. Starts as a monolith; can later split into CDN frontend + API service + Redis.
+
+---
+
+## Core Features
+
+- Multi-tenancy: Organizations → Stores → Users
+- RBAC: Admin, Store Manager, Inventory Manager, Cashier
+- Dual Auth: Session (web) + JWT (API/integrations)
+- Invitation Flow: Email/SMS token-based onboarding
+- Inventory: Products, stock levels, expiry alerts
+- Billing: Customers, invoices, revenue tracking
+- Dashboard: Low stock, expiring products, sales stats
+- Audit Logging (planned)
+
+---
+
+## Tech Stack
+
+Frontend: React 18, Vite, TypeScript, TanStack Query, React Router, Radix UI, ShadCN UI, Tailwind CSS, Recharts, Framer Motion
+Backend: Node.js (Express), Drizzle ORM, Neon PostgreSQL, Passport.js, JWT, Nodemailer, Twilio (optional)
+Security: Helmet, express-rate-limit, CORS
+Tooling: esbuild, Vitest, Playwright (planned), Docker multi-stage build
+
+---
+
+## Architecture
+
+Single container (Express API + static React build). Shared Drizzle schema in `shared/schema.ts`. Evolves to separate services and caching layer when scaling.
+
+---
+
+## Project Structure
+
+```
+PantryPal/
+├── client/              # React app
+│   ├── public/          # Static assets
+│   └── src/
+│       ├── components/  # UI + layout
+│       ├── hooks/       # Custom hooks
+│       ├── lib/         # api.ts, utils.ts
+│       ├── pages/       # Route views
+│       ├── App.tsx      # Root component
+│       └── main.tsx     # Entry point
+├── server/
+│   ├── routes.ts        # API routes
+│   ├── index.ts         # Server bootstrap (+ Vite dev)
+│   ├── storage.ts       # Data access layer
+│   ├── db.ts            # DB connection
+│   └── vite.ts          # Dev integration
+├── shared/
+│   └── schema.ts        # Drizzle schema & types
+├── docs/                # Extended docs
+├── Dockerfile           # Production image
+├── docker-compose.yml   # Orchestration
+├── package.json
+└── README.md
+```
+
+---
+
+## Getting Started
+
+```bash
+git clone https://github.com/Creat1ve-shubh/PantryPal.git
+cd PantryPal
+npm install
+cp .env.docker .env   # or create manually
+npm run db:push       # Apply schema
+npx tsx server/scripts/seed-rbac.ts  # Seed roles (optional)
+npm run dev
+```
+
+Dev URL: http://localhost:5000
+
+---
+
+## Environment Variables
+
+```env
+DATABASE_URL=postgresql://user:password@host:port/db
+SESSION_SECRET=replace-with-strong-random
+JWT_ACCESS_SECRET=access-secret
+JWT_REFRESH_SECRET=refresh-secret
+APP_BASE_URL=http://localhost:5000
+PORT=5000
+HOST=127.0.0.1
+NODE_ENV=development
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=app-password
+TWILIO_ACCOUNT_SID=...
+TWILIO_AUTH_TOKEN=...
+TWILIO_PHONE_NUMBER=+1234567890
+```
+
+Generate secure secrets:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+---
+
+## NPM Scripts
+
+| Script       | Description                       |
+| ------------ | --------------------------------- |
+| dev          | Start dev server (Express + Vite) |
+| build        | Build frontend + bundle server    |
+| start        | Run production server from dist   |
+| db:push      | Apply Drizzle schema              |
+| check        | Type check                        |
+| test         | (Planned) run tests               |
+| docker:build | Build Docker images               |
+| docker:up    | Start containers                  |
+| docker:down  | Stop containers                   |
+
+---
+
+## Documentation
+
+See `docs/README.md` for detailed guides: authentication, security, roles, migrations, Docker & testing.
+
+---
+
+## Contributing
+
+Fork → branch (`feature/xyz`) → commit → push → PR. Open issues for discussion before large changes.
+
+---
+
+## License
+
+MIT
+
+---
+
+## Support
+
+Create issues: https://github.com/Creat1ve-shubh/PantryPal/issues
+
+---
+
+Built with ❤️ by the PantryPal Team# PantryPal# PantryPal
 
 > **A modern B2B SaaS platform for inventory and billing management**> **A modern B2B SaaS platform for inventory and billing management**
-
-
 
 PantryPal is a full-stack web application designed to solve inefficiencies in modern inventory and bill management processes. Built with a focus on multi-tenancy, role-based access control (RBAC), and real-time operations.PantryPal is a full-stack web application designed to solve inefficiencies in modern inventory and bill management processes. Built with a focus on multi-tenancy, role-based access control (RBAC), and real-time operations
 
     <br />
 
----    <a href="https://github.com/vansht24/qr-pantry-pro"><strong>Explore the docs »</strong></a>
+--- <a href="https://github.com/vansht24/qr-pantry-pro"><strong>Explore the docs »</strong></a>
 
     <br />
 
-## 📚 Table of Contents    <br />
+## 📚 Table of Contents <br />
 
     <a href="https://github.com/vansht24/qr-pantry-pro">View Demo</a>
 
-- [Tech Stack](#-tech-stack)    &middot;
+- [Tech Stack](#-tech-stack) &middot;
 
-- [Project Structure](#-project-structure)    <a href="https://github.com/vansht24/qr-pantry-pro/issues/new">Report Bug or Request a Feature</a>
+- [Project Structure](#-project-structure) <a href="https://github.com/vansht24/qr-pantry-pro/issues/new">Report Bug or Request a Feature</a>
 
-- [Key Features](#-key-features)  </p>
+- [Key Features](#-key-features) </p>
 
 - [Getting Started](#-getting-started)</div>
 
@@ -36,47 +203,47 @@ PantryPal is a full-stack web application designed to solve inefficiencies in mo
 
 - [API Endpoints](#-api-endpoints)<details>
 
-- [Environment Variables](#-environment-variables)  <summary>Table of Contents</summary>
+- [Environment Variables](#-environment-variables) <summary>Table of Contents</summary>
 
-- [Deployment](#-deployment)  <ol>
+- [Deployment](#-deployment) <ol>
 
     <li>
 
----      <a href="#about-the-project">About The Project</a>
+--- <a href="#about-the-project">About The Project</a>
 
       <ul>
 
-## 🛠 Tech Stack        <li><a href="#built-with">Built With</a></li>
+## 🛠 Tech Stack <li><a href="#built-with">Built With</a></li>
 
       </ul>
 
-### Frontend    </li>
+### Frontend </li>
 
-- **Framework**: React 18.3 with TypeScript    <li>
+- **Framework**: React 18.3 with TypeScript <li>
 
-- **Routing**: React Router DOM v7      <a href="#getting-started">Getting Started</a>
+- **Routing**: React Router DOM v7 <a href="#getting-started">Getting Started</a>
 
-- **State Management**: React Context API + TanStack Query      <ul>
+- **State Management**: React Context API + TanStack Query <ul>
 
-- **UI Components**:         <li><a href="#prerequisites">Prerequisites</a></li>
+- **UI Components**: <li><a href="#prerequisites">Prerequisites</a></li>
 
-  - Radix UI primitives (Dialogs, Dropdowns, Popovers, etc.)        <li><a href="#installation">Installation</a></li>
+  - Radix UI primitives (Dialogs, Dropdowns, Popovers, etc.) <li><a href="#installation">Installation</a></li>
 
-  - ShadCN UI component library      </ul>
+  - ShadCN UI component library </ul>
 
-  - Tailwind CSS for styling    </li>
+  - Tailwind CSS for styling </li>
 
-- **Forms**: React Hook Form + Zod validation    <li><a href="#usage">Usage</a></li>
+- **Forms**: React Hook Form + Zod validation <li><a href="#usage">Usage</a></li>
 
-- **Icons**: Lucide React    <li><a href="#roadmap">Roadmap</a></li>
+- **Icons**: Lucide React <li><a href="#roadmap">Roadmap</a></li>
 
-- **QR Code**: qr-scanner, qrcode, react-qr-code    <li><a href="#contributing">Contributing</a></li>
+- **QR Code**: qr-scanner, qrcode, react-qr-code <li><a href="#contributing">Contributing</a></li>
 
-- **Charts**: Recharts    <li><a href="#license">License</a></li>
+- **Charts**: Recharts <li><a href="#license">License</a></li>
 
-- **Animations**: Framer Motion    <li><a href="#contact">Contact</a></li>
+- **Animations**: Framer Motion <li><a href="#contact">Contact</a></li>
 
-- **Build Tool**: Vite    <li><a href="#acknowledgments">Acknowledgments</a></li>
+- **Build Tool**: Vite <li><a href="#acknowledgments">Acknowledgments</a></li>
 
   </ol>
 
@@ -96,7 +263,7 @@ PantryPal is a full-stack web application designed to solve inefficiencies in mo
 
   - bcrypt for password hashing[![Product Name Screen Shot][product-screenshot]](https://example.com)
 
-- **Security**: 
+- **Security**:
 
   - Helmet.js for HTTP headersHere's a blank template to get started. To avoid retyping too much info, do a search and replace with your text editor for the following: `github_username`, `repo_name`, `twitter_handle`, `linkedin_username`, `email_client`, `email`, `project_title`, `project_description`, `project_license`
 
@@ -112,19 +279,17 @@ PantryPal is a full-stack web application designed to solve inefficiencies in mo
 
 - **API Documentation**: RESTful architecture### Built With
 
+### Development Tools\* [![Next][Next.js]][Next-url]
 
+- **Language**: TypeScript 5.x\* [![React][React.js]][React-url]
 
-### Development Tools* [![Next][Next.js]][Next-url]
+- **Package Manager**: npm\* [![Node][Node.js]][Node-url]
 
-- **Language**: TypeScript 5.x* [![React][React.js]][React-url]
+- **Linting**: ESLint + Prettier\* [![Express][Express.js]][Express-url]
 
-- **Package Manager**: npm* [![Node][Node.js]][Node-url]
+- **Database Migrations**: Drizzle Kit\* [![Tailwindcss][Tailwindcss.com]][Tailwind-url]
 
-- **Linting**: ESLint + Prettier* [![Express][Express.js]][Express-url]
-
-- **Database Migrations**: Drizzle Kit* [![Tailwindcss][Tailwindcss.com]][Tailwind-url]
-
-- **Testing**: Built-in dev error boundaries* [![Typescript][Typescriptlang.org]][Typescript-url]
+- **Testing**: Built-in dev error boundaries\* [![Typescript][Typescriptlang.org]][Typescript-url]
 
 * [![Postgresql][postgresql.com]][Postgresql-url]
 
@@ -134,9 +299,7 @@ PantryPal is a full-stack web application designed to solve inefficiencies in mo
 
 ## 📁 Project Structure
 
-
-
-```
+````
 
 PantryPal/<!-- GETTING STARTED -->
 
@@ -188,9 +351,9 @@ PantryPal/<!-- GETTING STARTED -->
 
 │   │   ├── authController.ts         # Auth & invite logic   ```
 
-│   │   └── rbacController.ts         # Role-based access control4. Connect to Postgres db 
+│   │   └── rbacController.ts         # Role-based access control4. Connect to Postgres db
 
-│   ├── middleware/           # Express middleware5. Start local server 
+│   ├── middleware/           # Express middleware5. Start local server
 
 │   │   ├── errorHandler.ts          # Global error handling   ```sh
 
@@ -242,7 +405,7 @@ PantryPal/<!-- GETTING STARTED -->
 
 │- [ ] System Architechture
 
-├── .env                       # Environment variables (gitignored)- [ ] Migration to Firebase 
+├── .env                       # Environment variables (gitignored)- [ ] Migration to Firebase
 
 ├── .env.email-sms            # Email/SMS config template- [ ] Multiple user profiles having different autherisations
 
@@ -258,9 +421,7 @@ PantryPal/<!-- GETTING STARTED -->
 
 └── vite.config.ts            # Vite build configuration
 
-```
-
-
+````
 
 ---<!-- CONTRIBUTING -->
 
@@ -288,8 +449,6 @@ Contributions are what make the open source community such an amazing place to l
 
 - **Dynamic Role Assignment**: Via invitations or manual assignment5. Open a Pull Request
 
-
-
 ### 3. **Dual Authentication System**<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 - **Session-based**: Traditional login for web app
@@ -300,7 +459,7 @@ Contributions are what make the open source community such an amazing place to l
 
 <a href="https://github.com/vansht24/qr-pantry-pro/graphs/contributors">
 
-### 4. **Invitation System**  <img src="https://contrib.rocks/image?repo=github_username/repo_name" alt="contrib.rocks image" />
+### 4. **Invitation System** <img src="https://contrib.rocks/image?repo=github_username/repo_name" alt="contrib.rocks image" />
 
 - Send invites via Email + SMS</a>
 
@@ -324,8 +483,6 @@ Contributions are what make the open source community such an amazing place to l
 
 - Search, filter, and sort capabilities
 
-
-
 ### 6. **Billing System**
 
 - Customer management<!-- CONTACT -->
@@ -335,8 +492,6 @@ Contributions are what make the open source community such an amazing place to l
 - Sales tracking
 
 - Revenue analyticsYour Name - [@twitter_handle](https://twitter.com/twitter_handle) - email@email_client.com
-
-
 
 ### 7. **Dashboard & Analytics**Project Link: [https://github.com/github_username/repo_name](https://github.com/github_username/repo_name)
 
@@ -348,19 +503,17 @@ Contributions are what make the open source community such an amazing place to l
 
 - Sales trends
 
-
-
 ---<!-- ACKNOWLEDGMENTS -->
 
 ## Acknowledgments
 
 ## 🚀 Getting Started
 
-* []()
+- []()
 
-### Prerequisites* []()
+### Prerequisites\* []()
 
-- Node.js 18+ and npm* []()
+- Node.js 18+ and npm\* []()
 
 - PostgreSQL database (or Neon serverless account)
 
@@ -368,13 +521,11 @@ Contributions are what make the open source community such an amazing place to l
 
 - Twilio account (optional, for SMS)
 
-
-
 ### Installation
 
 <!-- MARKDOWN LINKS & IMAGES -->
 
-```bash<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
+````bash<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 
 # Clone the repository[contributors-shield]: https://img.shields.io/github/contributors/github_username/repo_name.svg?style=for-the-badge
 
@@ -422,7 +573,7 @@ npm run dev[Tailwind-url]: https://tailwindcss.com/
 
 ```[postgresql.com]: https://img.shields.io/badge/postgresql-4169e1?style=for-the-badge&logo=postgresql&logoColor=white
 
-[postgresql-url]: https://www.postgresql.org/ 
+[postgresql-url]: https://www.postgresql.org/
 
 The app will be available at `http://localhost:5000`[Typescriptlang.org]: https://shields.io/badge/TypeScript-3178C6?logo=TypeScript&logoColor=FFF&style=flat-square
 
@@ -508,11 +659,12 @@ npm run db:push          # Push schema changes to database
 
 # Type checking
 npm run check            # Run TypeScript compiler checks
-```
+````
 
 ### Adding a New Page
 
 1. **Create the page component**:
+
    ```tsx
    // client/src/pages/MyNewPage.tsx
    export default function MyNewPage() {
@@ -521,11 +673,12 @@ npm run check            # Run TypeScript compiler checks
    ```
 
 2. **Add route in App.tsx**:
+
    ```tsx
-   import MyNewPage from './pages/MyNewPage';
-   
+   import MyNewPage from "./pages/MyNewPage";
+
    // Inside your Routes component
-   <Route path="/my-new-page" element={<MyNewPage />} />
+   <Route path="/my-new-page" element={<MyNewPage />} />;
    ```
 
 3. **Add sidebar link** (if needed):
@@ -541,6 +694,7 @@ npm run check            # Run TypeScript compiler checks
 ### Adding a New API Endpoint
 
 1. **Define in routes**:
+
    ```typescript
    // server/routes.ts
    app.get("/api/my-endpoint", isAuthenticated, async (req, res) => {
@@ -554,6 +708,7 @@ npm run check            # Run TypeScript compiler checks
    ```
 
 2. **Add storage method** (if needed):
+
    ```typescript
    // server/storage.ts
    async getMyData() {
@@ -565,8 +720,8 @@ npm run check            # Run TypeScript compiler checks
    ```typescript
    // client/src/lib/api.ts
    export async function getMyData() {
-     const response = await fetch('/api/my-endpoint');
-     if (!response.ok) throw new Error('Failed to fetch');
+     const response = await fetch("/api/my-endpoint");
+     if (!response.ok) throw new Error("Failed to fetch");
      return response.json();
    }
    ```
@@ -574,6 +729,7 @@ npm run check            # Run TypeScript compiler checks
 ### Database Schema Changes
 
 1. **Update schema**:
+
    ```typescript
    // shared/schema.ts
    export const myNewTable = pgTable("my_new_table", {
@@ -584,6 +740,7 @@ npm run check            # Run TypeScript compiler checks
    ```
 
 2. **Push changes**:
+
    ```bash
    npm run db:push
    ```
@@ -598,23 +755,27 @@ npm run check            # Run TypeScript compiler checks
 ## 🔐 Authentication & Authorization
 
 ### Session-Based Auth (Primary)
+
 - Used for web application login
 - Managed by Passport.js + express-session
 - Sessions stored in PostgreSQL via connect-pg-simple
 - Cookie-based authentication
 
 **Files**:
+
 - `server/auth.ts` - Session middleware
 - `server/authRoutes.ts` - Login/logout/register endpoints
 - `client/src/contexts/AuthContext.tsx` - Frontend auth state
 
 ### JWT Auth (API/Integrations)
+
 - Used for API integrations and invitation system
 - Supports access + refresh tokens
 - Access token: 15 minutes expiry
 - Refresh token: 7 days expiry
 
 **Files**:
+
 - `server/routes.jwt.ts` - JWT-protected endpoints
 - `server/middleware/jwtAuth.ts` - JWT verification
 - `server/utils/jwt.ts` - Token generation/validation
@@ -623,6 +784,7 @@ npm run check            # Run TypeScript compiler checks
 ### RBAC System
 
 **Roles** (in order of permissions):
+
 1. **Admin** - Full system access
    - Can invite: Store Managers, Inventory Managers, Cashiers
 2. **Store Manager** - Store-level operations
@@ -631,6 +793,7 @@ npm run check            # Run TypeScript compiler checks
 4. **Cashier** - Sales and billing only
 
 **Files**:
+
 - `shared/schema.ts` - Roles, permissions, user_roles tables
 - `server/scripts/seed-rbac.ts` - Role definitions
 - `server/controllers/rbacController.ts` - Role filtering logic
@@ -642,50 +805,62 @@ npm run check            # Run TypeScript compiler checks
 ### Core Tables
 
 #### `users`
+
 - User accounts
 - Fields: id, username, email, password, role, full_name, phone, is_active
 
 #### `organizations`
+
 - Multi-tenant organizations
 - Fields: id, name, created_at
 
 #### `stores`
+
 - Physical stores within organizations
 - Fields: id, org_id, name, location, manager_id
 
 #### `roles`
+
 - RBAC role definitions
 - Fields: id, name, description, created_at
 
 #### `permissions`
+
 - Granular permissions
 - Fields: id, name, description, resource, action
 
 #### `role_permissions`
+
 - Maps roles to permissions
 - Fields: role_id, permission_id
 
 #### `user_roles`
+
 - Assigns users to orgs/stores with roles
 - Fields: id, user_id, org_id, store_id, role_id
 
 #### `user_invites`
+
 - Invitation tokens
 - Fields: id, org_id, email, full_name, phone, role_id, token_hash, expires_at, accepted_at
 
 #### `products`
+
 - Inventory items
 - Fields: id, name, category, brand, barcode, qr_code, mrp, buying_cost, manufacturing_date, expiry_date, quantity_in_stock, min_stock_level
 
 #### `customers`
+
 - Customer records
 - Fields: id, name, email, phone, address
 
 #### `bills`
+
 - Sales invoices
 - Fields: id, bill_number, customer_id, items (JSONB), total_amount, discount, final_amount, payment_method
 
 #### `audit_logs`
+
 - Activity tracking
 - Fields: id, user_id, org_id, action, details, ip_address, timestamp
 
@@ -694,6 +869,7 @@ npm run check            # Run TypeScript compiler checks
 ## 🌐 API Endpoints
 
 ### Authentication (Session)
+
 ```
 POST   /api/auth/register      Register new user
 POST   /api/auth/login         Login
@@ -703,6 +879,7 @@ GET    /api/org/current        Get user's current org ID
 ```
 
 ### Authentication (JWT)
+
 ```
 POST   /auth/login             Login (returns access + refresh tokens)
 POST   /auth/refresh           Refresh access token
@@ -710,6 +887,7 @@ POST   /auth/logout            Invalidate refresh token
 ```
 
 ### Organizations & Invitations
+
 ```
 POST   /org/invite             Send invitation (admin/store_manager)
 POST   /org/invite/accept      Accept invitation
@@ -717,6 +895,7 @@ GET    /rbac/roles             Get assignable roles (filtered by user role)
 ```
 
 ### Products
+
 ```
 GET    /api/products           List all products
 GET    /api/products/:id       Get single product
@@ -726,6 +905,7 @@ DELETE /api/products/:id       Delete product (admin)
 ```
 
 ### Customers
+
 ```
 GET    /api/customers          List customers
 POST   /api/customers          Create customer
@@ -734,6 +914,7 @@ DELETE /api/customers/:id      Delete customer
 ```
 
 ### Billing
+
 ```
 GET    /api/bills              List bills
 POST   /api/bills              Create bill
@@ -741,11 +922,13 @@ GET    /api/bills/:id          Get bill details
 ```
 
 ### Dashboard
+
 ```
 GET    /api/dashboard/stats    Get dashboard statistics
 ```
 
 ### User Management
+
 ```
 GET    /api/auth/users         List users (admin/store_manager)
 POST   /api/auth/users         Create user (admin)
@@ -791,12 +974,14 @@ TWILIO_PHONE_NUMBER=+1234567890
 ### Getting Email/SMS Credentials
 
 **Gmail App Password**:
+
 1. Enable 2FA on your Google account
 2. Visit https://myaccount.google.com/apppasswords
 3. Generate an app password
 4. Use this as `SMTP_PASS`
 
 **Twilio**:
+
 1. Sign up at https://www.twilio.com
 2. Get your Account SID and Auth Token from the dashboard
 3. Purchase a phone number
@@ -837,27 +1022,32 @@ npm start
 All detailed guides are available in the [`docs/`](./docs) folder:
 
 ### Setup & Configuration
+
 - [`docs/QUICKSTART.md`](./docs/QUICKSTART.md) - Quick start guide
 - [`docs/AUTH_SETUP_GUIDE.md`](./docs/AUTH_SETUP_GUIDE.md) - Detailed authentication setup
 - [`docs/QUICK_START_AUTH.md`](./docs/QUICK_START_AUTH.md) - Quick auth configuration
 - [`docs/NEON_MIGRATION.md`](./docs/NEON_MIGRATION.md) - Database migration guide
 
 ### Authentication & Security
+
 - [`docs/MULTI_AUTH_SUMMARY.md`](./docs/MULTI_AUTH_SUMMARY.md) - Dual auth system explanation
 - [`docs/AUTH_JWT_README.md`](./docs/AUTH_JWT_README.md) - JWT implementation details
 - [`docs/SECURITY_COMPLETE.md`](./docs/SECURITY_COMPLETE.md) - Complete security guide
 - [`docs/SECURITY_SUMMARY.md`](./docs/SECURITY_SUMMARY.md) - Security summary
 
 ### Features & Implementation
+
 - [`docs/REGISTRATION_FEATURE.md`](./docs/REGISTRATION_FEATURE.md) - User registration flow
 - [`docs/ROLE_MIGRATION.md`](./docs/ROLE_MIGRATION.md) - RBAC role changes
 - [`docs/IMPLEMENTATION_COMPLETE.md`](./docs/IMPLEMENTATION_COMPLETE.md) - Complete implementation guide
 - [`docs/IMPLEMENTATION_SUMMARY.md`](./docs/IMPLEMENTATION_SUMMARY.md) - Implementation summary
 
 ### Docker & Testing
+
 - [`docs/DOCKER_TESTING_GUIDE.md`](./docs/DOCKER_TESTING_GUIDE.md) - Containerization & testing guide
 
 ### Configuration Templates
+
 - `.env.email-sms` - Email/SMS configuration template
 - `.env.docker` - Docker environment template
 
