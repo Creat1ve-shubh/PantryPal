@@ -1,246 +1,204 @@
+# 🥘 PantryPal
 
-<a id="readme-top"></a>
+A comprehensive inventory management system for pantry and product tracking with expiry alerts, billing, and multi-user support.
 
+## 📋 Overview
 
+PantryPal is a full-stack web application designed to help manage pantry inventory, track product expiration dates, generate bills, and manage multiple organizations with role-based access control.
 
+## ✨ Features
 
-<!-- PROJECT SHIELDS -->
-<!--
-*** I'm using markdown "reference style" links for readability.
-*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
-*** See the bottom of this document for the declaration of the reference variables
-*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
-*** https://www.markdownguide.org/basic-syntax/#reference-style-links
--->
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![project_license][license-shield]][license-url]
-[![LinkedIn][linkedin-shield]][linkedin-url]
+- 📦 **Inventory Management** - Track products with quantities, expiry dates, and categories
+- 🔔 **Expiry Alerts** - Automatic notifications for products nearing expiration
+- 💳 **Billing System** - Generate and manage customer bills
+- 👥 **Multi-User Support** - Role-based access control (Admin, Manager, Staff)
+- 🏢 **Organization Management** - Multi-tenant architecture with organization isolation
+- 📱 **QR Code Scanning** - Quick product lookup and management
+- 📊 **Reports & Analytics** - Comprehensive reporting dashboard
+- 🔐 **Secure Authentication** - JWT-based auth with session management
+- 🐳 **Docker Support** - Containerized deployment for easy setup
 
-
-
-<!-- PROJECT LOGO -->
-<br />
-<div align="center">
-  <a href="https://github.com/vansht24/qr-pantry-pro">
-    <img src="images/logo.png" alt="Logo" width="80" height="80">
-  </a>
-
-<h3 align="center">PantryPal</h3>
-
-  <p align="center">
-    A B2B SaaS offering that aims to solve inefficiencies for modern inventory and bill management processesa and systems
-    <br />
-    <a href="https://github.com/vansht24/qr-pantry-pro"><strong>Explore the docs »</strong></a>
-    <br />
-    <br />
-    <a href="https://github.com/vansht24/qr-pantry-pro">View Demo</a>
-    &middot;
-    <a href="https://github.com/vansht24/qr-pantry-pro/issues/new">Report Bug or Request a Feature</a>
-  </p>
-</div>
-
-
-
-<!-- TABLE OF CONTENTS -->
-<details>
-  <summary>Table of Contents</summary>
-  <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-      <ul>
-        <li><a href="#built-with">Built With</a></li>
-      </ul>
-    </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
-    </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
-  </ol>
-</details>
-
-
-
-<!-- ABOUT THE PROJECT -->
-## About The Project
-
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
-
-Here's a blank template to get started. To avoid retyping too much info, do a search and replace with your text editor for the following: `github_username`, `repo_name`, `twitter_handle`, `linkedin_username`, `email_client`, `email`, `project_title`, `project_description`, `project_license`
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-### Built With
-
-* [![Next][Next.js]][Next-url]
-* [![React][React.js]][React-url]
-* [![Node][Node.js]][Node-url]
-* [![Express][Express.js]][Express-url]
-* [![Tailwindcss][Tailwindcss.com]][Tailwind-url]
-* [![Typescript][Typescriptlang.org]][Typescript-url]
-* [![Postgresql][postgresql.com]][Postgresql-url]
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- GETTING STARTED -->
-## Getting Started
-
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
+## 🚀 Quick Start
 
 ### Prerequisites
 
-This is an example of how to list things you need to use the software and how to install them.
-* npm
-  ```sh
-  npm install npm@latest -g
-  ```
+- Node.js 18+ and npm
+- PostgreSQL database
+- Docker (optional, for containerized deployment)
 
 ### Installation
 
-1. Open terminal at source directory
-2. Clone the repo
-   ```sh
-   git clone https://github.com/vansht24/qr-pantry-pro.git
+1. **Clone the repository**
+
+   ```bash
+   git clone https://github.com/Creat1ve-shubh/PantryPal.git
+   cd PantryPal
    ```
-3. Install NPM packages
-   ```sh
+
+2. **Install dependencies**
+
+   ```bash
    npm install
    ```
-4. Connect to Postgres db 
-5. Start local server 
-   ```sh
+
+3. **Configure environment variables**
+
+   Copy `.env.example` to `.env` and configure your settings:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   **📖 For detailed environment configuration, see [docs/ENVIRONMENT.md](./docs/ENVIRONMENT.md)**
+
+4. **Set up the database**
+
+   ```bash
+   npm run db:push
+   ```
+
+5. **Start the development server**
+
+   ```bash
    npm run dev
    ```
 
+6. **Access the application**
+   - Open http://localhost:5000
+   - Default admin credentials will be created on first run
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+## 🐳 Docker Deployment
 
+```bash
+# Development
+docker-compose -f docker-compose.dev.yml up
 
+# Production
+docker-compose up
+```
 
-<!-- USAGE EXAMPLES -->
-## Usage
+For detailed Docker setup, see [docs/DOCKER_TESTING_GUIDE.md](./docs/DOCKER_TESTING_GUIDE.md)
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+## 📚 Documentation
 
-_For more examples, please refer to the [Documentation](https://example.com)_
+Comprehensive documentation is available in the [docs](./docs) folder:
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+### Getting Started
 
+- [Quick Start Guide](./docs/QUICKSTART.md) - Get up and running quickly
+- [Environment Configuration](./docs/ENVIRONMENT.md) - **Complete environment variable setup**
+- [Quick Auth Setup](./docs/QUICK_START_AUTH.md) - Authentication quick start
 
+### Core Features
 
-<!-- ROADMAP -->
-## Roadmap
+- [Authentication Setup](./docs/AUTH_SETUP_GUIDE.md) - Complete authentication guide
+- [Security Implementation](./docs/SECURITY_COMPLETE.md) - Security features and best practices
+- [User Management & RBAC](./docs/ROLE_MIGRATION.md) - Role-based access control
 
-- [ ] Categorical sorting of products
-- [ ] System Architechture
-- [ ] Migration to Firebase 
-- [ ] Multiple user profiles having different autherisations
-    - [ ] Nested Feature
+### Deployment & Operations
 
-See the [open issues](https://github.com/vansht24/qr-pantry-pro/issues) for a full list of proposed features (and known issues).
+- [Docker & Testing](./docs/DOCKER_TESTING_GUIDE.md) - Container setup and testing
+- [Database Migration](./docs/NEON_MIGRATION.md) - PostgreSQL/Neon setup
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+### Architecture
 
+- [Multi-Auth System](./docs/MULTI_AUTH_SUMMARY.md) - Dual authentication overview
+- [Implementation Summary](./docs/IMPLEMENTATION_SUMMARY.md) - Complete implementation details
 
+## 🛠️ Technology Stack
 
-<!-- CONTRIBUTING -->
-## Contributing
+**Frontend:**
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+- React 18 with TypeScript
+- Vite for build tooling
+- TailwindCSS for styling
+- Shadcn/ui components
+- React Router for navigation
 
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
-Don't forget to give the project a star! Thanks again!
+**Backend:**
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+- Node.js with Express
+- PostgreSQL database
+- Drizzle ORM
+- JWT authentication
+- bcryptjs for password hashing
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+**DevOps:**
 
-### Top contributors:
+- Docker & Docker Compose
+- Vitest for unit testing
+- Playwright for e2e testing
 
-<a href="https://github.com/vansht24/qr-pantry-pro/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=github_username/repo_name" alt="contrib.rocks image" />
-</a>
+## 📁 Project Structure
 
+```
+PantryPal/
+├── client/               # React frontend
+│   ├── src/
+│   │   ├── components/   # UI components
+│   │   ├── pages/        # Page components
+│   │   ├── contexts/     # React contexts
+│   │   └── lib/          # Utilities
+├── server/               # Express backend
+│   ├── controllers/      # Route controllers
+│   ├── middleware/       # Auth & other middleware
+│   ├── services/         # Business logic
+│   └── config/           # Configuration
+├── shared/               # Shared types & schemas
+├── docs/                 # Documentation
+└── tests/                # Test suites
+```
 
+## 🔐 Environment Variables
 
-<!-- LICENSE -->
-## License
+All environment variables are now stored in `.env` file at the root of the project.
 
-Distributed under the project_license. See `LICENSE.txt` for more information.
+**📖 For complete environment variable documentation and configuration guide, see:**
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+- **[docs/ENVIRONMENT.md](./docs/ENVIRONMENT.md)** - Complete environment configuration guide
 
+Key variables include:
 
+- Database connection (PostgreSQL/Neon)
+- JWT secrets and session configuration
+- Email/SMS service credentials (optional)
+- Application settings
 
-<!-- CONTACT -->
-## Contact
+## 🧪 Testing
 
-Your Name - [@twitter_handle](https://twitter.com/twitter_handle) - email@email_client.com
+```bash
+# Unit tests
+npm run test
 
-Project Link: [https://github.com/github_username/repo_name](https://github.com/github_username/repo_name)
+# E2E tests
+npm run test:e2e
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+# Run all tests
+npm run test:all
+```
 
+## 🤝 Contributing
 
+Contributions are welcome! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
-<!-- ACKNOWLEDGMENTS -->
-## Acknowledgments
+## 📝 License
 
-* []()
-* []()
-* []()
+This project is licensed under the MIT License.
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+## 🔗 Links
 
+- [GitHub Repository](https://github.com/Creat1ve-shubh/PantryPal)
+- [Issue Tracker](https://github.com/Creat1ve-shubh/PantryPal/issues)
+- [Discussions](https://github.com/Creat1ve-shubh/PantryPal/discussions)
 
+## 📧 Support
 
-<!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/github_username/repo_name.svg?style=for-the-badge
-[contributors-url]: https://github.com/github_username/repo_name/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/github_username/repo_name.svg?style=for-the-badge
-[forks-url]: https://github.com/github_username/repo_name/network/members
-[stars-shield]: https://img.shields.io/github/stars/github_username/repo_name.svg?style=for-the-badge
-[stars-url]: https://github.com/github_username/repo_name/stargazers
-[issues-shield]: https://img.shields.io/github/issues/github_username/repo_name.svg?style=for-the-badge
-[issues-url]: https://github.com/github_username/repo_name/issues
-[license-shield]: https://img.shields.io/github/license/github_username/repo_name.svg?style=for-the-badge
-[license-url]: https://github.com/github_username/repo_name/blob/master/LICENSE.txt
-[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://linkedin.com/in/linkedin_username
-[product-screenshot]: images/screenshot.png
-<!-- Shields.io badges. You can a comprehensive list with many more badges at: https://github.com/inttter/md-badges -->
-[Next.js]: https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white
-[Next-url]: https://nextjs.org/
-[React.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
-[React-url]: https://reactjs.org/
-[Node.js]: https://img.shields.io/badge/node.js-339933?style=for-the-badge&logo=Node.js&logoColor=white
-[Node-url]: https://nodejs.org/en
-[Tailwindcss.com]: https://img.shields.io/badge/Tailwind_CSS-grey?style=for-the-badge&logo=tailwind-css&logoColor=38B2AC
-[Tailwind-url]: https://tailwindcss.com/
-[postgresql.com]: https://img.shields.io/badge/postgresql-4169e1?style=for-the-badge&logo=postgresql&logoColor=white
-[postgresql-url]: https://www.postgresql.org/ 
-[Typescriptlang.org]: https://shields.io/badge/TypeScript-3178C6?logo=TypeScript&logoColor=FFF&style=flat-square
-[Typescript-url]: https://www.typescriptlang.org/
-[Express.js]: https://img.shields.io/badge/express.js-000000?style=for-the-badge&logo=express&logoColor=white
-[Express-url]: https://expressjs.com/
+For questions or support:
+
+- Open an issue on GitHub
+- Check the [documentation](./docs)
+- Join the discussions
+
+---
+
+**Last Updated**: November 21, 2025
