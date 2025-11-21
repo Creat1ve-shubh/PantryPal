@@ -82,11 +82,22 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="p-4">
-        {!isCollapsed && (
-          <div className="text-sidebar-foreground">
-            <h2 className="text-xl font-bold">🛒 Pantry Pal</h2>
-            <p className="text-sm opacity-90">Grocery Management</p>
+      <SidebarHeader className="p-4 border-b border-sidebar-border">
+        {!isCollapsed ? (
+          <div className="flex items-center gap-3 text-sidebar-foreground">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-600 text-white">
+              <Package className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold">Pantry Pal</h2>
+              <p className="text-xs text-sidebar-foreground/70">
+                Grocery Management
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-600 text-white mx-auto">
+            <Package className="h-6 w-6" />
           </div>
         )}
       </SidebarHeader>
@@ -142,44 +153,53 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
-      <SidebarFooter className="p-4">
+      <SidebarFooter className="p-4 border-t border-sidebar-border">
         {!isCollapsed && user && (
           <div className="space-y-3">
-            <Separator />
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sidebar-accent">
-                <UserIcon className="h-5 w-5 text-sidebar-accent-foreground" />
+            <div className="flex items-center gap-3 p-2 rounded-lg bg-sidebar-accent/50">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-600 text-white">
+                <UserIcon className="h-5 w-5" />
               </div>
               <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-medium text-sidebar-foreground truncate">
+                <p className="text-sm font-semibold text-sidebar-foreground truncate">
                   {user.full_name || user.username}
                 </p>
                 <p className="text-xs text-sidebar-foreground/60 capitalize">
-                  {user.role}
+                  {user.role.replace(/_/g, " ")}
                 </p>
               </div>
             </div>
             <Button
-              variant="outline"
+              variant="destructive"
               size="sm"
               onClick={handleLogout}
-              className="w-full justify-start"
+              className="w-full justify-start bg-white hover:bg-orange-300 text-black"
             >
-              <LogOut className="h-4 w-4 mr-2" />
+              <LogOut className="h-4 w-4 mr-2 text-black" />
               Logout
             </Button>
           </div>
         )}
         {isCollapsed && user && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleLogout}
-            className="w-full"
-            title="Logout"
-          >
-            <LogOut className="h-5 w-5" />
-          </Button>
+          <div className="space-y-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-full h-10 rounded-full bg-orange-600 hover:bg-orange-700 text-white"
+              title={user.full_name || user.username}
+            >
+              <UserIcon className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="destructive"
+              size="icon"
+              onClick={handleLogout}
+              className="w-full h-10 bg-red-600 hover:bg-red-700 text-white"
+              title="Logout"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+          </div>
         )}
       </SidebarFooter>
     </Sidebar>
