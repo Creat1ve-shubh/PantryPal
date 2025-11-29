@@ -9,6 +9,7 @@ import {
   uuid,
   date,
   varchar,
+  unique,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -298,22 +299,33 @@ export const role_permissions = pgTable("role_permissions", {
     .references(() => permissions.id, { onDelete: "cascade" }),
 });
 
-export const user_roles = pgTable("user_roles", {
-  id: serial("id").primaryKey(),
-  user_id: integer("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  org_id: uuid("org_id")
-    .notNull()
-    .references(() => organizations.id, { onDelete: "cascade" }),
-  store_id: uuid("store_id").references(() => stores.id, {
-    onDelete: "cascade",
-  }),
-  role_id: integer("role_id")
-    .notNull()
-    .references(() => roles.id, { onDelete: "cascade" }),
-  created_at: timestamp("created_at").notNull().defaultNow(),
-});
+export const user_roles = pgTable(
+  "user_roles",
+  {
+    id: serial("id").primaryKey(),
+    user_id: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    org_id: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    store_id: uuid("store_id").references(() => stores.id, {
+      onDelete: "cascade",
+    }),
+    role_id: integer("role_id")
+      .notNull()
+      .references(() => roles.id, { onDelete: "cascade" }),
+    created_at: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    // Prevent duplicate assignments: one user can only have one role per org
+    unique_user_org_role: unique().on(
+      table.user_id,
+      table.org_id,
+      table.role_id
+    ),
+  })
+);
 
 export const sessions = pgTable("sessions", {
   id: uuid("id")

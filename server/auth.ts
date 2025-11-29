@@ -75,11 +75,18 @@ passport.deserializeUser(async (id: number, done) => {
     }
 
     // Fetch organization and store assignments
-    const [assignment] = await db
+    console.log(`[AUTH] Looking for user_roles for user_id: ${user.id}`);
+    const assignments = await db
       .select()
       .from(user_roles)
-      .where(eq(user_roles.user_id, user.id))
-      .limit(1);
+      .where(eq(user_roles.user_id, user.id));
+
+    console.log(
+      `[AUTH] Found ${assignments.length} assignments:`,
+      JSON.stringify(assignments, null, 2)
+    );
+
+    const assignment = assignments[0];
 
     const { password: _, ...userWithoutPassword } = user;
 
