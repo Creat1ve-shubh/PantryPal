@@ -1,197 +1,302 @@
-import { useState, useEffect, useRef } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { api, type Product } from "@/lib/api"
-import { QrCode, Camera, Search, Package, Play, Square } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import QrScanner from "qr-scanner"
+import { useState, useEffect, useRef } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { api, type Product } from "@/lib/api";
+import {
+  QrCode,
+  Camera,
+  Search,
+  Package,
+  Play,
+  Square,
+  Plus,
+  Minus,
+  BarChart3,
+  ShoppingCart,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import QrScanner from "qr-scanner";
+import { BrowserMultiFormatReader, NotFoundException } from "@zxing/library";
 
 export default function QRScanner() {
-  const [manualCode, setManualCode] = useState("")
-  const [scannedData, setScannedData] = useState<any>(null)
-  const [product, setProduct] = useState<Product | null>(null)
-  const [isSearching, setIsSearching] = useState(false)
-  const [isScanning, setIsScanning] = useState(false)
-  const [scanner, setScanner] = useState<QrScanner | null>(null)
-  const { toast } = useToast()
-  const videoRef = useRef<HTMLVideoElement>(null)
+  const [manualCode, setManualCode] = useState("");
+  const [scannedData, setScannedData] = useState<any>(null);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scannerType, setScannerType] = useState<"qr" | "barcode">("barcode");
+  const [scanner, setScanner] = useState<QrScanner | null>(null);
+  const [barcodeReader, setBarcodeReader] =
+    useState<BrowserMultiFormatReader | null>(null);
+  const [stockQuantity, setStockQuantity] = useState(1);
+  const { toast } = useToast();
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleManualScan = async () => {
-    if (!manualCode.trim()) return
-    await processQRCode(manualCode)
-  }
+    if (!manualCode.trim()) return;
+    await processCode(manualCode);
+  };
 
-  const processQRCode = async (qrData: string) => {
-    setIsSearching(true)
+  const processCode = async (codeData: string) => {
+    setIsSearching(true);
     try {
       // Try to parse as JSON first (for our generated QR codes)
       try {
-        const parsed = JSON.parse(qrData)
-        setScannedData(parsed)
-        
+        const parsed = JSON.parse(codeData);
+        setScannedData(parsed);
+
         // If it has a product ID, try to fetch the product
         if (parsed.id) {
-          await findProductByCode(parsed.id)
+          await findProductByCode(parsed.id);
         }
       } catch {
         // If not JSON, treat as simple product ID or barcode
-        await findProductByCode(qrData)
+        await findProductByCode(codeData);
       }
     } catch (error) {
-      console.error('Error scanning code:', error)
+      console.error("Error scanning code:", error);
       toast({
         title: "Error",
-        description: "Failed to process QR code",
+        description: "Failed to process code",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsSearching(false)
+      setIsSearching(false);
     }
-  }
+  };
 
   const findProductByCode = async (code: string) => {
     try {
-      const products = await api.getProducts()
-      console.log("Searching for code:", code)
-      console.log("Available products:", products.length)
-      
-      // Search by QR code, barcode, or ID
-      const foundProduct = products.find(p => 
-        p.qr_code === code || 
-        p.barcode === code || 
-        p.id === code ||
-        (p.qr_code && p.qr_code.includes(code))
-      )
-      
-      console.log("Found product:", foundProduct)
-      
-      if (foundProduct) {
-        setProduct(foundProduct)
-        toast({
-          title: "Product Found!",
-          description: `Found: ${foundProduct.name}`,
-        })
-      } else {
-        setProduct(null)
-        toast({
-          title: "Product Not Found",
-          description: `No product matches this QR code: ${code}`,
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
-      console.error('Error finding product:', error)
+      // Use the new backend search API for faster lookup
+      const foundProduct = await api.searchProductByCode(code);
+
+      console.log("Found product:", foundProduct);
+
+      setProduct(foundProduct);
       toast({
-        title: "Error",
-        description: "Failed to search for product",
+        title: "Product Found!",
+        description: `Found: ${foundProduct.name}`,
+      });
+    } catch (error: any) {
+      console.error("Error finding product:", error);
+      setProduct(null);
+      toast({
+        title: "Product Not Found",
+        description: error.message || `No product matches this code: ${code}`,
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   const getStockStatus = (product: Product) => {
-    const stock = product.quantity_in_stock || 0
-    const minLevel = product.min_stock_level || 0
-    
+    const stock = product.quantity_in_stock || 0;
+    const minLevel = product.min_stock_level || 0;
+
     if (stock === 0) {
-      return { label: "Out of Stock", variant: "destructive" as const }
+      return { label: "Out of Stock", variant: "destructive" as const };
     } else if (stock <= minLevel) {
-      return { label: "Low Stock", variant: "secondary" as const }
+      return { label: "Low Stock", variant: "secondary" as const };
     } else {
-      return { label: "In Stock", variant: "default" as const }
+      return { label: "In Stock", variant: "default" as const };
     }
-  }
+  };
 
   const getExpiryStatus = (expiryDate?: string | null) => {
-    if (!expiryDate) return null
-    
-    const expiry = new Date(expiryDate)
-    const now = new Date()
-    const daysDiff = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 3600 * 24))
-    
-    if (daysDiff < 0) {
-      return { label: "Expired", variant: "destructive" as const }
-    } else if (daysDiff <= 7) {
-      return { label: `${daysDiff} days left`, variant: "secondary" as const }
-    } else if (daysDiff <= 30) {
-      return { label: `${daysDiff} days left`, variant: "outline" as const }
-    }
-    return null
-  }
+    if (!expiryDate) return null;
 
-  const startCameraScanning = async () => {
-    if (!videoRef.current) return
-    
+    const expiry = new Date(expiryDate);
+    const now = new Date();
+    const daysDiff = Math.ceil(
+      (expiry.getTime() - now.getTime()) / (1000 * 3600 * 24)
+    );
+
+    if (daysDiff < 0) {
+      return { label: "Expired", variant: "destructive" as const };
+    } else if (daysDiff <= 7) {
+      return { label: `${daysDiff} days left`, variant: "secondary" as const };
+    } else if (daysDiff <= 30) {
+      return { label: `${daysDiff} days left`, variant: "outline" as const };
+    }
+    return null;
+  };
+
+  const startQRScanning = async () => {
+    if (!videoRef.current) return;
+
     try {
-      setIsScanning(true)
+      setIsScanning(true);
+      setScannerType("qr");
       const qrScanner = new QrScanner(
         videoRef.current,
         (result) => {
           toast({
             title: "QR Code Detected!",
             description: "Processing scanned data...",
-          })
-          processQRCode(result.data)
-          stopCameraScanning()
+          });
+          processCode(result.data);
+          stopScanning();
         },
         {
           returnDetailedScanResult: true,
           highlightScanRegion: true,
           highlightCodeOutline: true,
         }
-      )
-      
-      await qrScanner.start()
-      setScanner(qrScanner)
-      
+      );
+
+      await qrScanner.start();
+      setScanner(qrScanner);
+
       toast({
-        title: "Camera Started",
-        description: "Point your camera at a QR code to scan",
-      })
+        title: "QR Scanner Started",
+        description: "Point your camera at a QR code",
+      });
     } catch (error) {
-      console.error('Error starting camera:', error)
+      console.error("Error starting QR scanner:", error);
       toast({
         title: "Camera Error",
         description: "Failed to access camera. Please check permissions.",
         variant: "destructive",
-      })
-      setIsScanning(false)
+      });
+      setIsScanning(false);
     }
-  }
+  };
 
-  const stopCameraScanning = () => {
-    if (scanner) {
-      scanner.stop()
-      scanner.destroy()
-      setScanner(null)
+  const startBarcodeScanning = async () => {
+    if (!videoRef.current) return;
+
+    try {
+      setIsScanning(true);
+      setScannerType("barcode");
+
+      const reader = new BrowserMultiFormatReader();
+      setBarcodeReader(reader);
+
+      await reader.decodeFromVideoDevice(
+        undefined,
+        videoRef.current,
+        (result, error) => {
+          if (result) {
+            toast({
+              title: "Barcode Detected!",
+              description: "Processing scanned data...",
+            });
+            processCode(result.getText());
+            stopScanning();
+          }
+          if (error && !(error instanceof NotFoundException)) {
+            console.error("Barcode scan error:", error);
+          }
+        }
+      );
+
+      toast({
+        title: "Barcode Scanner Started",
+        description: "Point your camera at a barcode",
+      });
+    } catch (error) {
+      console.error("Error starting barcode scanner:", error);
+      toast({
+        title: "Camera Error",
+        description: "Failed to access camera. Please check permissions.",
+        variant: "destructive",
+      });
+      setIsScanning(false);
     }
-    setIsScanning(false)
-  }
+  };
+
+  const stopScanning = () => {
+    if (scanner) {
+      scanner.stop();
+      scanner.destroy();
+      setScanner(null);
+    }
+    if (barcodeReader) {
+      barcodeReader.reset();
+      setBarcodeReader(null);
+    }
+    setIsScanning(false);
+  };
 
   const resetScan = () => {
-    setManualCode("")
-    setScannedData(null)
-    setProduct(null)
-    stopCameraScanning()
-  }
+    setManualCode("");
+    setScannedData(null);
+    setProduct(null);
+    setStockQuantity(1);
+    stopScanning();
+  };
+
+  // Quick Actions
+  const handleStockUpdate = async (operation: "add" | "subtract" | "set") => {
+    if (!product) return;
+
+    try {
+      const response = await fetch(`/api/products/${product.id}/stock`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ quantity: stockQuantity, operation }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update stock");
+      }
+
+      const updated = await response.json();
+      setProduct(updated);
+
+      toast({
+        title: "Stock Updated!",
+        description: `${
+          operation === "add"
+            ? "Added"
+            : operation === "subtract"
+            ? "Removed"
+            : "Set"
+        } ${stockQuantity} ${product.unit}`,
+      });
+
+      setStockQuantity(1);
+    } catch (error: any) {
+      console.error("Error updating stock:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update stock",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     return () => {
       if (scanner) {
-        scanner.stop()
-        scanner.destroy()
+        scanner.stop();
+        scanner.destroy();
       }
-    }
-  }, [scanner])
+      if (barcodeReader) {
+        barcodeReader.reset();
+      }
+    };
+  }, [scanner, barcodeReader]);
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">QR Code Scanner</h1>
-        <p className="text-muted-foreground">Scan QR codes to quickly find product information</p>
+        <h1 className="text-3xl font-bold text-foreground">
+          Barcode & QR Scanner
+        </h1>
+        <p className="text-muted-foreground">
+          Scan barcodes or QR codes to quickly find and manage products
+        </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -200,24 +305,29 @@ export default function QRScanner() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <QrCode className="h-5 w-5" />
-              Scan QR Code
+              Scan Code
             </CardTitle>
-            <CardDescription>Enter QR code data manually or use camera scanner</CardDescription>
+            <CardDescription>
+              Enter code manually or use camera scanner
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Manual Input */}
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="manual-code">Manual QR Code Entry</Label>
+                <Label htmlFor="manual-code">Manual Code Entry</Label>
                 <div className="flex gap-2">
                   <Input
                     id="manual-code"
-                    placeholder="Enter QR code or product barcode"
+                    placeholder="Enter barcode, QR code, or product ID"
                     value={manualCode}
                     onChange={(e) => setManualCode(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleManualScan()}
+                    onKeyPress={(e) => e.key === "Enter" && handleManualScan()}
                   />
-                  <Button onClick={handleManualScan} disabled={isSearching || !manualCode.trim()}>
+                  <Button
+                    onClick={handleManualScan}
+                    disabled={isSearching || !manualCode.trim()}
+                  >
                     <Search className="h-4 w-4" />
                   </Button>
                 </div>
@@ -231,22 +341,36 @@ export default function QRScanner() {
                 <video
                   ref={videoRef}
                   className="w-full h-64 bg-black rounded-lg"
-                  style={{ display: isScanning ? 'block' : 'none' }}
+                  style={{ display: isScanning ? "block" : "none" }}
                 />
                 {!isScanning && (
                   <div className="border-2 border-dashed rounded-lg p-8 text-center bg-muted/50 h-64 flex flex-col justify-center">
                     <Camera className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground mb-4">Ready to scan QR codes</p>
-                    <Button onClick={startCameraScanning} className="mx-auto">
-                      <Play className="h-4 w-4 mr-2" />
-                      Start Camera
-                    </Button>
+                    <p className="text-muted-foreground mb-4">
+                      Ready to scan codes
+                    </p>
+                    <div className="flex gap-2 justify-center">
+                      <Button
+                        onClick={startBarcodeScanning}
+                        className="mx-auto"
+                      >
+                        <BarChart3 className="h-4 w-4 mr-2" />
+                        Scan Barcode
+                      </Button>
+                      <Button onClick={startQRScanning} variant="outline">
+                        <QrCode className="h-4 w-4 mr-2" />
+                        Scan QR
+                      </Button>
+                    </div>
                   </div>
                 )}
                 {isScanning && (
-                  <div className="absolute top-2 right-2 z-10">
-                    <Button 
-                      onClick={stopCameraScanning}
+                  <div className="absolute top-2 right-2 z-10 flex gap-2">
+                    <Badge variant="secondary">
+                      {scannerType === "qr" ? "QR Scanner" : "Barcode Scanner"}
+                    </Badge>
+                    <Button
+                      onClick={stopScanning}
                       variant="destructive"
                       size="sm"
                     >
@@ -273,7 +397,7 @@ export default function QRScanner() {
           {scannedData && (
             <Card>
               <CardHeader>
-                <CardTitle>Scanned QR Code Data</CardTitle>
+                <CardTitle>Scanned Code Data</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="bg-muted p-4 rounded-lg">
@@ -285,7 +409,7 @@ export default function QRScanner() {
             </Card>
           )}
 
-          {/* Product Information */}
+          {/* Product Information & Quick Actions */}
           {product && (
             <Card>
               <CardHeader>
@@ -306,37 +430,94 @@ export default function QRScanner() {
                   <div className="flex flex-wrap gap-2">
                     <Badge variant="outline">{product.category}</Badge>
                     {(() => {
-                      const stockStatus = getStockStatus(product)
-                      return <Badge variant={stockStatus.variant}>{stockStatus.label}</Badge>
+                      const stockStatus = getStockStatus(product);
+                      return (
+                        <Badge variant={stockStatus.variant}>
+                          {stockStatus.label}
+                        </Badge>
+                      );
                     })()}
                     {(() => {
-                      const expiryStatus = getExpiryStatus(product.expiry_date)
-                      return expiryStatus && <Badge variant={expiryStatus.variant}>{expiryStatus.label}</Badge>
+                      const expiryStatus = getExpiryStatus(product.expiry_date);
+                      return (
+                        expiryStatus && (
+                          <Badge variant={expiryStatus.variant}>
+                            {expiryStatus.label}
+                          </Badge>
+                        )
+                      );
                     })()}
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <Label className="text-sm font-medium">MRP</Label>
-                      <p className="text-lg font-semibold text-green-600">₹{Number(product.mrp).toLocaleString()}</p>
+                      <p className="text-lg font-semibold text-green-600">
+                        ₹{Number(product.mrp).toLocaleString()}
+                      </p>
                     </div>
                     <div>
                       <Label className="text-sm font-medium">Stock</Label>
-                      <p className="text-lg">{product.quantity_in_stock || 0} {product.unit}</p>
+                      <p className="text-lg">
+                        {product.quantity_in_stock || 0} {product.unit}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="border-t pt-4 space-y-4">
+                    <Label className="text-sm font-medium">Quick Actions</Label>
+
+                    {/* Stock Update */}
+                    <div className="space-y-2">
+                      <Label className="text-sm">Update Stock</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          min="1"
+                          value={stockQuantity}
+                          onChange={(e) =>
+                            setStockQuantity(parseInt(e.target.value) || 1)
+                          }
+                          className="w-24"
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleStockUpdate("add")}
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleStockUpdate("subtract")}
+                        >
+                          <Minus className="h-4 w-4 mr-1" />
+                          Remove
+                        </Button>
+                      </div>
                     </div>
                   </div>
 
                   {product.expiry_date && (
                     <div>
                       <Label className="text-sm font-medium">Expiry Date</Label>
-                      <p>{new Date(product.expiry_date).toLocaleDateString('en-IN')}</p>
+                      <p>
+                        {new Date(product.expiry_date).toLocaleDateString(
+                          "en-IN"
+                        )}
+                      </p>
                     </div>
                   )}
 
                   {product.description && (
                     <div>
                       <Label className="text-sm font-medium">Description</Label>
-                      <p className="text-muted-foreground">{product.description}</p>
+                      <p className="text-muted-foreground">
+                        {product.description}
+                      </p>
                     </div>
                   )}
 
@@ -354,7 +535,9 @@ export default function QRScanner() {
                     {product.qr_code && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">QR Code:</span>
-                        <span className="font-mono text-xs break-all">{product.qr_code}</span>
+                        <span className="font-mono text-xs break-all">
+                          {product.qr_code}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -368,9 +551,9 @@ export default function QRScanner() {
             <Card>
               <CardContent className="text-center py-12">
                 <QrCode className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">No QR Code Scanned</h3>
+                <h3 className="text-lg font-semibold mb-2">No Code Scanned</h3>
                 <p className="text-muted-foreground">
-                  Enter a QR code manually to see product information
+                  Scan a barcode or QR code to see product information
                 </p>
               </CardContent>
             </Card>
@@ -378,5 +561,5 @@ export default function QRScanner() {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -8,6 +8,157 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Barcode/QR Code Search API - Fast product lookup by code
+  app.get("/api/products/search/:code", isAuthenticated, async (req, res) => {
+    try {
+      const { code } = req.params;
+
+      // Log session and user data for debugging
+      console.log("🔍 Search request for code:", code);
+      console.log("👤 req.user:", req.user);
+      console.log("🍪 req.session:", req.session);
+
+      let orgId: string | undefined;
+      let storeId: string | undefined;
+
+      // Try to get orgId and storeId, handle missing gracefully
+      try {
+        orgId = requireOrgId(req);
+        console.log("✅ orgId:", orgId);
+      } catch (e: any) {
+        console.error("❌ Missing orgId:", e.message);
+        return res.status(401).json({
+          error: "Organization context not available. Please log in again.",
+          details: e.message,
+        });
+      }
+
+      try {
+        storeId = requireStoreId(req);
+        console.log("✅ storeId:", storeId);
+      } catch (e: any) {
+        console.warn("⚠️ Missing storeId:", e.message);
+        // Store ID might be optional in some cases, continue with just orgId
+      }
+
+      const { db } = await import("./db");
+      const { products } = await import("../shared/schema");
+      const { and, eq, or } = await import("drizzle-orm");
+
+      // Build code match condition
+      // Only search by ID if the code looks like a UUID (contains dashes and right length)
+      const isUuidLike =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          code
+        );
+
+      const codeConditions = [
+        eq(products.barcode, code),
+        eq(products.qr_code, code),
+      ];
+
+      if (isUuidLike) {
+        codeConditions.push(eq(products.id, code));
+      }
+
+      const codeMatch = or(...codeConditions);
+
+      // Build where clause based on available context
+      const whereConditions = [eq(products.org_id, orgId), codeMatch];
+      if (storeId) {
+        whereConditions.push(eq(products.store_id, storeId));
+      }
+
+      // Search by barcode, QR code, or product ID
+      const [product] = await db
+        .select()
+        .from(products)
+        .where(and(...whereConditions))
+        .limit(1);
+
+      if (product) {
+        console.log("✅ Product found:", product.name);
+        res.json(product);
+      } else {
+        console.log("❌ Product not found for code:", code);
+        res.status(404).json({ error: "Product not found", code });
+      }
+    } catch (error: any) {
+      console.error("❌ Error searching product by code:", error);
+      console.error("Stack trace:", error.stack);
+      res
+        .status(500)
+        .json({ error: "Failed to search product", details: error.message });
+    }
+  });
+
+  // Quick action: Update stock quantity
+  app.patch(
+    "/api/products/:id/stock",
+    isAuthenticated,
+    hasRole("admin", "store_manager", "inventory_manager"),
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { quantity, operation } = req.body; // operation: 'set', 'add', 'subtract'
+        const orgId = requireOrgId(req);
+        const storeId = requireStoreId(req);
+
+        const product = await storage.getProduct(id, { orgId, storeId });
+        if (!product) {
+          return res.status(404).json({ error: "Product not found" });
+        }
+
+        let newQuantity = product.quantity_in_stock || 0;
+
+        switch (operation) {
+          case "set":
+            newQuantity = quantity;
+            break;
+          case "add":
+            newQuantity += quantity;
+            break;
+          case "subtract":
+            newQuantity = Math.max(0, newQuantity - quantity);
+            break;
+          default:
+            return res.status(400).json({
+              error: "Invalid operation. Use 'set', 'add', or 'subtract'",
+            });
+        }
+
+        const updatedProduct = await storage.updateProduct(
+          id,
+          { quantity_in_stock: newQuantity },
+          { orgId, storeId }
+        );
+
+        // Log inventory transaction
+        const transactionType =
+          operation === "add"
+            ? "in"
+            : operation === "subtract"
+            ? "out"
+            : "adjustment";
+        await storage.createInventoryTransaction(
+          {
+            product_id: id,
+            transaction_type: transactionType,
+            quantity: Math.abs(quantity),
+            reference_type: "adjustment",
+            notes: `Stock ${operation} via barcode scanner`,
+          },
+          { orgId, storeId }
+        );
+
+        res.json(updatedProduct);
+      } catch (error) {
+        console.error("Error updating stock:", error);
+        res.status(500).json({ error: "Failed to update stock" });
+      }
+    }
+  );
+
   // Products API - Different roles have different permissions
   app.get("/api/products", isAuthenticated, async (req, res) => {
     try {
