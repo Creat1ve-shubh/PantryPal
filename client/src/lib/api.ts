@@ -112,6 +112,25 @@ class ApiClient {
     return this.get<Product>(`/products/${id}`);
   }
 
+  async searchProductByCode(code: string): Promise<Product> {
+    const response = await fetch(
+      `${API_BASE}/products/search/${encodeURIComponent(code)}`,
+      {
+        credentials: "include",
+      }
+    );
+    if (!response.ok) {
+      if (response.status === 401) {
+        window.location.href = "/login";
+      }
+      if (response.status === 404) {
+        throw new Error(`No product found with code: ${code}`);
+      }
+      throw new Error(`API Error: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
   async createProduct(product: Partial<Product>): Promise<Product> {
     return this.post<Product>("/products", product);
   }
