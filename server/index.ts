@@ -13,7 +13,7 @@ import { db } from "./db";
 import { sessions } from "../shared/schema";
 import { lt } from "drizzle-orm";
 import * as Sentry from "@sentry/node";
-import { ProfilingIntegration } from "@sentry/profiling-node";
+import { nodeProfilingIntegration } from "@sentry/profiling-node";
 
 // Load environment-specific .env file
 const envFile =
@@ -34,7 +34,7 @@ if (process.env.SENTRY_DSN) {
     environment: process.env.NODE_ENV || "development",
     integrations: [
       // Enable performance instrumentation
-      new ProfilingIntegration(),
+      nodeProfilingIntegration(),
       new Sentry.Integrations.Http({ tracing: true }),
     ],
     tracesSampleRate: parseFloat(
