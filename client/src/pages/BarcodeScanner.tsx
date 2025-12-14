@@ -14,6 +14,8 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { api, type Product } from "@/lib/api";
+import { cache, shouldEnableIndexedDb } from "@/lib/indexeddb";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Barcode,
   Settings,
@@ -32,6 +34,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 export default function BarcodeScanner() {
+  const { user } = useAuth();
   // Core state
   const [barcodeInput, setBarcodeInput] = useState("");
   const [product, setProduct] = useState<Product | null>(null);
@@ -189,6 +192,33 @@ export default function BarcodeScanner() {
 
     try {
       playBeep();
+      // Try IndexedDB cache first in prod
+      if (shouldEnableIndexedDb() && user?.org_id && user?.store_id) {
+        const cached = await cache.getProductByBarcode(code, {
+          orgId: user.org_id,
+          storeId: user.store_id,
+        });
+        if (cached) {
+          setProduct({
+            id: cached.id,
+            name: cached.name,
+            barcode: cached.barcode || undefined,
+            category: "",
+            brand: "",
+            mrp: 0,
+            buying_cost: 0,
+            quantity_in_stock: 0,
+            min_stock_level: 0,
+            unit: "piece",
+          } as Product);
+          setScanHistory((prev) => [
+            { code, time: now, found: true },
+            ...prev.slice(0, 9),
+          ]);
+          if (continuousMode) setBarcodeInput("");
+          return;
+        }
+      }
       const foundProduct = await api.searchProductByCode(code);
 
       setProduct(foundProduct);
