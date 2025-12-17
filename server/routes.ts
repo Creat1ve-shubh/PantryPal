@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { isAuthenticated, hasRole } from "./auth";
-import { requireOrgId, requireStoreId } from "./middleware/tenantContext";
+import { requireOrgId } from "./middleware/tenantContext";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -19,7 +19,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("🍪 req.session:", req.session);
 
       let orgId: string | undefined;
-      let storeId: string | undefined;
 
       // Try to get orgId and storeId, handle missing gracefully
       try {
@@ -33,13 +32,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      try {
-        storeId = requireStoreId(req);
-        console.log("✅ storeId:", storeId);
-      } catch (e: any) {
-        console.warn("⚠️ Missing storeId:", e.message);
-        // Store ID might be optional in some cases, continue with just orgId
-      }
+      // Org-only tenancy: storeId not required
 
       const { db } = await import("./db");
       const { products } = await import("../shared/schema");
@@ -65,9 +58,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Build where clause based on available context
       const whereConditions = [eq(products.org_id, orgId), codeMatch];
-      if (storeId) {
-        whereConditions.push(eq(products.store_id, storeId));
-      }
 
       // Search by barcode, QR code, or product ID
       const [product] = await db
@@ -102,9 +92,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { id } = req.params;
         const { quantity, operation } = req.body; // operation: 'set', 'add', 'subtract'
         const orgId = requireOrgId(req);
-        const storeId = requireStoreId(req);
 
-        const product = await storage.getProduct(id, { orgId, storeId });
+        const product = await storage.getProduct(id, { orgId });
         if (!product) {
           return res.status(404).json({ error: "Product not found" });
         }
@@ -130,7 +119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const updatedProduct = await storage.updateProduct(
           id,
           { quantity_in_stock: newQuantity },
-          { orgId, storeId }
+          { orgId }
         );
 
         // Log inventory transaction
@@ -148,7 +137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             reference_type: "adjustment",
             notes: `Stock ${operation} via barcode scanner`,
           },
-          { orgId, storeId }
+          { orgId }
         );
 
         res.json(updatedProduct);
@@ -163,8 +152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products", isAuthenticated, async (req, res) => {
     try {
       const orgId = requireOrgId(req);
-      const storeId = requireStoreId(req);
-      const products = await storage.getProducts({ orgId, storeId });
+      const products = await storage.getProducts({ orgId });
       res.json(products);
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -175,10 +163,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products/:id", isAuthenticated, async (req, res) => {
     try {
       const orgId = requireOrgId(req);
-      const storeId = requireStoreId(req);
       const product = await storage.getProduct(req.params.id, {
         orgId,
-        storeId,
       });
       if (!product) {
         return res.status(404).json({ error: "Product not found" });
@@ -198,7 +184,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const orgId = requireOrgId(req);
-        const storeId = requireStoreId(req);
         // Convert empty date strings to null to avoid PostgreSQL errors
         const productData = {
           ...req.body,
@@ -208,7 +193,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const product = await storage.createProduct(productData, {
           orgId,
-          storeId,
         });
         res.status(201).json(product);
       } catch (error) {
@@ -226,7 +210,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const orgId = requireOrgId(req);
-        const storeId = requireStoreId(req);
         // Convert empty date strings to null to avoid PostgreSQL errors
         const productData = {
           ...req.body,
@@ -237,7 +220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const product = await storage.updateProduct(
           req.params.id,
           productData,
-          { orgId, storeId }
+          { orgId }
         );
         if (!product) {
           return res.status(404).json({ error: "Product not found" });
@@ -258,10 +241,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const orgId = requireOrgId(req);
-        const storeId = requireStoreId(req);
         const product = await storage.deleteProduct(req.params.id, {
           orgId,
-          storeId,
         });
         if (!product) {
           return res.status(404).json({ error: "Product not found" });
@@ -278,8 +259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/customers", isAuthenticated, async (req, res) => {
     try {
       const orgId = requireOrgId(req);
-      const storeId = requireStoreId(req);
-      const customers = await storage.getCustomers({ orgId, storeId });
+      const customers = await storage.getCustomers({ orgId });
       res.json(customers);
     } catch (error) {
       console.error("Error fetching customers:", error);
@@ -294,10 +274,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const orgId = requireOrgId(req);
-        const storeId = requireStoreId(req);
         const customer = await storage.createCustomer(req.body, {
           orgId,
-          storeId,
         });
         res.status(201).json(customer);
       } catch (error) {
@@ -311,8 +289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/bills", isAuthenticated, async (req, res) => {
     try {
       const orgId = requireOrgId(req);
-      const storeId = requireStoreId(req);
-      const bills = await storage.getBills({ orgId, storeId });
+      const bills = await storage.getBills({ orgId });
       res.json(bills);
     } catch (error) {
       console.error("Error fetching bills:", error);
@@ -323,8 +300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/bills/today", isAuthenticated, async (req, res) => {
     try {
       const orgId = requireOrgId(req);
-      const storeId = requireStoreId(req);
-      const bills = await storage.getBillsForToday({ orgId, storeId });
+      const bills = await storage.getBillsForToday({ orgId });
       res.json(bills);
     } catch (error) {
       console.error("Error fetching today's bills:", error);
@@ -340,8 +316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const orgId = requireOrgId(req);
-        const storeId = requireStoreId(req);
-        const bill = await storage.createBill(req.body, { orgId, storeId });
+        const bill = await storage.createBill(req.body, { orgId });
         res.status(201).json(bill);
       } catch (error) {
         console.error("Error creating bill:", error);
@@ -354,10 +329,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/bills/:billId/items", isAuthenticated, async (req, res) => {
     try {
       const orgId = requireOrgId(req);
-      const storeId = requireStoreId(req);
       const items = await storage.getBillItems(req.params.billId, {
         orgId,
-        storeId,
       });
       res.json(items);
     } catch (error) {
@@ -373,13 +346,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const orgId = requireOrgId(req);
-        const storeId = requireStoreId(req);
         const item = await storage.createBillItem(
           {
             ...req.body,
             bill_id: req.params.billId,
           },
-          { orgId, storeId }
+          { orgId }
         );
         res.status(201).json(item);
       } catch (error) {
@@ -393,10 +365,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/inventory-transactions", isAuthenticated, async (req, res) => {
     try {
       const orgId = requireOrgId(req);
-      const storeId = requireStoreId(req);
       const productId = req.query.product_id as string;
       const transactions = await storage.getInventoryTransactions(
-        { orgId, storeId },
+        { orgId },
         productId
       );
       res.json(transactions);
@@ -413,10 +384,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const orgId = requireOrgId(req);
-        const storeId = requireStoreId(req);
         const transaction = await storage.createInventoryTransaction(req.body, {
           orgId,
-          storeId,
         });
         res.status(201).json(transaction);
       } catch (error) {
@@ -494,11 +463,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/dashboard/stats", isAuthenticated, async (req, res) => {
     try {
       const orgId = requireOrgId(req);
-      const storeId = requireStoreId(req);
-      const products = await storage.getProducts({ orgId, storeId });
-      const todayBills = await storage.getBillsForToday({ orgId, storeId });
-      const allBills = await storage.getBills({ orgId, storeId });
-      const customers = await storage.getCustomers({ orgId, storeId });
+      const products = await storage.getProducts({ orgId });
+      const todayBills = await storage.getBillsForToday({ orgId });
+      const allBills = await storage.getBills({ orgId });
+      const customers = await storage.getCustomers({ orgId });
 
       const lowStock = products.filter(
         (p) => (p.quantity_in_stock || 0) <= (p.min_stock_level || 0)
