@@ -23,6 +23,8 @@ import { validateRequestBody } from "./middleware/validation";
 import dotenv from "dotenv";
 import type { SQL } from "drizzle-orm";
 import { z } from "zod";
+import crypto from "crypto";
+import { env } from "./config/env";
 
 dotenv.config();
 
@@ -218,6 +220,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Product not found" });
       }
       res.json({ message: "Product restored", product });
+    })
+  );
+
+  // ============================
+  // Payments (Razorpay) Endpoints
+  // ============================
+  // Create subscription intent (server creates subscription/order metadata)
+  app.post(
+    "/api/payments/create-subscription",
+    asyncHandler(async (req, res) => {
+      // Minimal scaffold: validate plan and return payload for frontend checkout
+      const bodySchema = z.object({
+        plan: z.string().default(env.SUBSCRIPTION_DEFAULT_PLAN),
+        metadata: z.record(z.any()).optional(),
+      });
+      const { plan, metadata } = bodySchema.parse(req.body || {});
+
+      // In a real integration, call Razorpay Subscriptions API here.
+      // For now, return a mock payload including the public key for checkout.
+      const subscriptionId = `sub_${Date.now()}`;
+      res.status(200).json({
+        ok: true,
+        provider: "razorpay",
+        key_id: env.RAZORPAY_KEY_ID || "",
+        plan,
+        subscription_id: subscriptionId,
+        metadata: metadata || {},
+        // Frontend should open Razorpay Checkout with this data
+      });
+    })
+  );
+
+  // Verify payment signature after checkout
+  app.post(
+    "/api/payments/verify",
+    asyncHandler(async (req, res) => {
+      const verifySchema = z.object({
+        razorpay_payment_id: z.string(),
+        razorpay_subscription_id: z.string().optional(),
+        razorpay_order_id: z.string().optional(),
+        razorpay_signature: z.string(),
+      });
+      const payload = verifySchema.parse(req.body || {});
+
+      // Build verification message as per Razorpay docs (order_id|payment_id or subscription_id|payment_id)
+      const message = payload.razorpay_order_id
+        ? `${payload.razorpay_order_id}|${payload.razorpay_payment_id}`
+        : `${payload.razorpay_subscription_id}|${payload.razorpay_payment_id}`;
+
+      const secret = env.RAZORPAY_KEY_SECRET || "";
+      const expectedSignature = crypto
+        .createHmac("sha256", secret)
+        .update(message)
+        .digest("hex");
+
+      const valid =
+        !!secret && expectedSignature === payload.razorpay_signature;
+      if (!valid) {
+        return res.status(400).json({ ok: false, error: "Invalid signature" });
+      }
+
+      // Issue short-lived onboarding token to allow organization registration.
+      const { signAccessToken } = await import("./utils/jwt");
+      const onboardingToken = signAccessToken({
+        sub:
+          payload.razorpay_subscription_id ||
+          payload.razorpay_order_id ||
+          payload.razorpay_payment_id,
+        roles: ["onboarding"],
+      });
+
+      res.status(200).json({ ok: true, onboardingToken });
+    })
+  );
+
+  // Razorpay webhook receiver (idempotent handling recommended)
+  app.post(
+    "/api/payments/webhook",
+    asyncHandler(async (req, res) => {
+      const signatureHeader = req.header("X-Razorpay-Signature") || "";
+      const webhookSecret = env.RAZORPAY_WEBHOOK_SECRET || "";
+      const body = JSON.stringify(req.body || {});
+      const digest = crypto
+        .createHmac("sha256", webhookSecret)
+        .update(body)
+        .digest("hex");
+      const valid = !!webhookSecret && digest === signatureHeader;
+
+      if (!valid) {
+        return res
+          .status(400)
+          .json({ ok: false, error: "Invalid webhook signature" });
+      }
+
+      // TODO: Persist event to payment_events table and reconcile subscription state
+      // For now, acknowledge receipt
+      res.status(200).json({ ok: true });
     })
   );
 

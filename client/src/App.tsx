@@ -23,6 +23,7 @@ import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import BarcodeScannerPhysical from "./pages/BarcodeScannerPhysical";
+import Subscription from "./pages/Subscription";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/invite/accept" element={<InviteAccept />} />
             <Route path="/org/invite" element={<OrgInvite />} />
+            <Route path="/subscribe" element={<Subscription />} />
 
             {/* Protected Routes - Dashboard is accessible by all authenticated users */}
             <Route

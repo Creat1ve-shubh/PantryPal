@@ -1,10 +1,16 @@
 // server/db.ts
 import { drizzle } from "drizzle-orm/neon-serverless";
-import { Pool } from "@neondatabase/serverless";
+import { Pool, neonConfig } from "@neondatabase/serverless";
 import * as schema from "../shared/schema";
 import dotenv from "dotenv";
+import ws from "ws";
 
 dotenv.config();
+
+// Use ws WebSocket implementation for Node 22 compatibility
+neonConfig.webSocketConstructor = ws;
+neonConfig.useSecureWebSocket = true;
+neonConfig.pipelineConnect = 10;
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL is not set in environment variables");
@@ -17,7 +23,13 @@ const SLOW_QUERY_THRESHOLD = parseInt(
 const DB_LOGGING = process.env.DB_LOGGING === "true";
 
 // Use Pool for transaction support (neon-serverless)
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  // Allow ~200-300 concurrent org users by increasing pool size
+  max: 20,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 2_000,
+});
 
 // Create drizzle database instance with pool
 export const db = drizzle(pool, {

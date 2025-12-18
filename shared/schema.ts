@@ -190,6 +190,36 @@ export const organizationRegistrationSchema = z.object({
     )
     .min(1, "At least one store is required")
     .max(10, "Maximum of 10 stores allowed"),
+  // GST + Vendor Details (India-specific)
+  vendorDetails: z
+    .object({
+      gst_number: z
+        .string()
+        .regex(
+          /^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}[Z]{1}[A-Z\d]{1}$/,
+          "Invalid GST number format (15 alphanumeric)"
+        )
+        .optional()
+        .or(z.literal("")),
+      owner_name: z
+        .string()
+        .min(2, "Owner name must be at least 2 characters")
+        .optional(),
+      owner_phone: z
+        .string()
+        .regex(/^\+?[0-9\-() ]{7,20}$/, "Invalid phone number")
+        .optional(),
+      owner_email: z.string().email().optional(),
+      msme_number: z.string().optional(),
+      business_address: z.string().optional(),
+      business_city: z.string().optional(),
+      business_state: z.string().optional(),
+      business_pin: z
+        .string()
+        .regex(/^\d{6}$/, "Invalid PIN code (6 digits)")
+        .optional(),
+    })
+    .optional(),
   admin: z.object({
     username: z
       .string()
@@ -277,6 +307,27 @@ export const organizations = pgTable("organizations", {
     .primaryKey()
     .default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
+  // GST + Vendor Details for India
+  gst_number: text("gst_number"),
+  owner_name: text("owner_name"),
+  owner_phone: text("owner_phone"),
+  owner_email: text("owner_email"),
+  msme_number: text("msme_number"),
+  business_address: text("business_address"),
+  business_city: text("business_city"),
+  business_state: text("business_state"),
+  business_pin: text("business_pin"),
+  // Document Verification
+  kyc_status: text("kyc_status").default("pending"), // pending | verified | rejected
+  verified_at: timestamp("verified_at"),
+  verified_by: integer("verified_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  verification_notes: text("verification_notes"),
+  // Subscription
+  payment_status: text("payment_status").default("pending"), // pending | active | inactive
+  subscription_id: text("subscription_id"),
+  plan_name: text("plan_name").default("starter"),
   created_at: timestamp("created_at").notNull().defaultNow(),
 });
 
