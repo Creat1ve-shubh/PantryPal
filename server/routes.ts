@@ -28,6 +28,13 @@ import { env } from "./config/env";
 
 dotenv.config();
 
+// --- Razorpay SDK import and initialization ---
+import Razorpay from "razorpay";
+const razorpay = new Razorpay({
+  key_id: env.RAZORPAY_KEY_ID,
+  key_secret: env.RAZORPAY_KEY_SECRET,
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Barcode/QR Code Search API - Fast product lookup by code
   app.get(
@@ -227,12 +234,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Payments (Razorpay) Endpoints
   // ============================
   // Create subscription intent (server creates subscription/order metadata)
-  // Razorpay SDK
-  import Razorpay from "razorpay";
-  const razorpay = new Razorpay({
-    key_id: env.RAZORPAY_KEY_ID,
-    key_secret: env.RAZORPAY_KEY_SECRET,
-  });
 
   app.post(
     "/api/payments/create-subscription",
@@ -243,8 +244,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       const { plan, metadata } = bodySchema.parse(req.body || {});
 
-      // Replace with your actual plan_id from Razorpay dashboard
-      const plan_id = plan; // Or map plan to plan_id if needed
+      // Map frontend plan keys to actual Razorpay plan_ids from environment variables
+      // Map frontend plan keys to actual Razorpay plan_ids (from .env.production)
+      const planMap = {
+        "starter-monthly": "plan_RvVENJ3WVsVpbi",
+        "professional-monthly": "plan_RvVEnDRX3Tq20k", // Add the correct plan_id for Professional if available
+        "enterprise-monthly": env.RAZORPAY_ENTERPRISE_PLAN_ID, // Add this to .env.production if you have an Enterprise plan
+        "premium-monthly": "plan_RvVEnDRX3Tq20k", // If 'premium' is an alias for 'professional', otherwise update accordingly
+      };
+      const plan_id = planMap[plan];
+      if (!plan_id) {
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid plan selected or plan_id not set in environment.",
+        });
+      }
       try {
         const subscription = await razorpay.subscriptions.create({
           plan_id,
