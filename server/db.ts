@@ -10,7 +10,7 @@ dotenv.config();
 // Use ws WebSocket implementation for Node 22 compatibility
 neonConfig.webSocketConstructor = ws;
 neonConfig.useSecureWebSocket = true;
-neonConfig.pipelineConnect = 10;
+neonConfig.pipelineConnect = "password";
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL is not set in environment variables");
@@ -36,14 +36,14 @@ export const db = drizzle(pool, {
   schema,
   logger: DB_LOGGING
     ? {
-        logQuery(query: string, params: unknown[]) {
-          const start = Date.now();
-          // Log after execution via middleware or manually track timing
-          if (query.length > 100) {
-            console.log(`🔍 Query: ${query.substring(0, 100)}...`);
-          }
-        },
-      }
+      logQuery(query: string, params: unknown[]) {
+        const start = Date.now();
+        // Log after execution via middleware or manually track timing
+        if (query.length > 100) {
+          console.log(`🔍 Query: ${query.substring(0, 100)}...`);
+        }
+      },
+    }
     : undefined,
 });
 

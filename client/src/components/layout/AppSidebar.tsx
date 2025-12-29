@@ -11,9 +11,11 @@ import {
   LogOut,
   User as UserIcon,
   ShoppingCart,
+  Download,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePWAInstall } from "@/hooks/use-pwa-install";
 
 import {
   Sidebar,
@@ -54,6 +56,7 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, hasRole } = useAuth();
+  const { isInstallable, install } = usePWAInstall();
   const currentPath = location.pathname;
 
   const isCollapsed = state === "collapsed";
@@ -171,6 +174,17 @@ export function AppSidebar() {
       <SidebarFooter className="p-3 border-t border-sidebar-border min-h-[70px] flex items-end">
         {!isCollapsed && user && (
           <div className="space-y-2 w-full">
+            {isInstallable && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={install}
+                className="w-full h-8 bg-blue-600 hover:bg-blue-700 text-white font-bold animate-pulse"
+              >
+                <Download className="h-3 w-3 mr-2" />
+                Install App
+              </Button>
+            )}
             <div className="flex items-center gap-2 p-2 rounded-lg bg-sidebar-accent/50">
               <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-orange-600 text-white">
                 <UserIcon className="h-4 w-4" />
@@ -207,7 +221,18 @@ export function AppSidebar() {
           </div>
         )}
         {isCollapsed && user && (
-          <div className="space-y-2 w-full">
+          <div className="space-y-2 w-full text-center flex flex-col items-center">
+            {isInstallable && (
+              <Button
+                variant="default"
+                size="icon"
+                onClick={install}
+                className="h-8 w-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex-shrink-0 animate-pulse mb-1"
+                title="Install App"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"

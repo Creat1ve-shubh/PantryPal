@@ -21,10 +21,13 @@ import {
 } from "./models/dtos";
 import { validateRequestBody } from "./middleware/validation";
 import dotenv from "dotenv";
+
 import type { SQL } from "drizzle-orm";
 import { z } from "zod";
 import crypto from "crypto";
 import { env } from "./config/env";
+
+// Import product image router
 
 dotenv.config();
 
@@ -36,6 +39,8 @@ const razorpay = new Razorpay({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Register product image proxy route
+
   // Barcode/QR Code Search API - Fast product lookup by code
   app.get(
     "/api/products/search/:code",

@@ -24,13 +24,16 @@ PantryPal is a full-stack web application designed to help manage pantry invento
 - 📦 **Inventory Management** - Track products with quantities, expiry dates, and categories
 - 🔔 **Expiry Alerts** - Automatic notifications for products nearing expiration
 - 💳 **Billing System** - Generate and manage customer bills with immutability guarantees
+- 📄 **Professional Invoices** - Generate high-quality PDF invoices for customers
+- 🖨️ **Thermal Printing** - Direct POS printing support via Web Serial API
+- 📱 **Offline PWA** - Full offline support for unreliable networks with service workers
 - 👥 **Multi-User Support** - Role-based access control (Admin, Store Manager, Inventory Manager, Cashier)
 - 🏢 **Organization Management** - Multi-tenant architecture with strict tenant isolation
 - 📱 **QR Code Generation & Storage** - Generate, store, and print QR codes for products
 - 📊 **Reports & Analytics** - Comprehensive reporting dashboard
 - 🔐 **Secure Authentication** - JWT-based auth with session management
 - ⚡ **Transaction Safety** - Atomic bill finalization with automatic rollback
-- 🐳 **Docker Support** - Containerized deployment for easy setup
+- 🐳 **Docker & NGINX** - Containerized production setup with NGINX reverse proxy
 
 ## 🚀 Quick Start
 
