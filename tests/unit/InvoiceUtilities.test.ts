@@ -52,6 +52,9 @@ describe("Thermal Printer Utility", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         // Mock navigator.serial
+        if (!global.navigator) {
+            (global as any).navigator = {};
+        }
         (global.navigator as any).serial = {
             requestPort: vi.fn(),
         };

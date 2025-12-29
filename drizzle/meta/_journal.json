@@ -29,6 +29,13 @@
       "when": 1766050108205,
       "tag": "0003_high_franklin_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1767027239813,
+      "tag": "0004_late_green_goblin",
+      "breakpoints": true
     }
   ]
 }

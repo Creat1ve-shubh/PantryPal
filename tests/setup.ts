@@ -6,8 +6,10 @@ let testDb: Pool;
 
 beforeAll(async () => {
   // Use separate test database
+  const connectionString = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
+  console.log(`🧪 Test DB Connection: ${connectionString?.substring(0, 20)}...`);
   testDb = new Pool({
-    connectionString: process.env.TEST_DATABASE_URL || process.env.DATABASE_URL,
+    connectionString,
   });
 });
 
