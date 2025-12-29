@@ -4,6 +4,17 @@ CREATE TABLE IF NOT EXISTS organizations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
   gst_number text,
+  owner_name text,
+  owner_phone text,
+  owner_email text,
+  msme_number text,
+  business_address text,
+  business_city text,
+  business_state text,
+  business_pin text,
+  kyc_status text DEFAULT 'pending',
+  verified_at timestamptz,
+  verified_by integer,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
