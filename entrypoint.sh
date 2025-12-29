@@ -29,6 +29,12 @@ if [ "$SEED_TEST_USERS" = "true" ]; then
   npx tsx server/scripts/seed-test-users.ts || echo "⚠️ Test user creation failed"
 fi
 
+# Sync static files for NGINX
+if [ -d "/shared/static" ]; then
+  echo "📂 Syncing static files for NGINX..."
+  cp -r dist/public/* /shared/static/ || true
+fi
+
 echo "🎉 Starting application..."
 
 # Execute the main command

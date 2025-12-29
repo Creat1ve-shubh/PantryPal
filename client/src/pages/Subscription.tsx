@@ -23,20 +23,14 @@ const PLANS = [
   {
     id: "starter-monthly",
     name: "Starter",
-    price: 999,
+    price: 399,
     features: ["Up to 1 store", "Basic inventory", "5 users"],
   },
   {
-    id: "pro-monthly",
-    name: "Professional",
-    price: 2499,
-    features: ["Up to 5 stores", "Advanced reports", "20 users"],
-  },
-  {
-    id: "enterprise-monthly",
-    name: "Enterprise",
-    price: 4999,
-    features: ["Unlimited stores", "Custom reports", "Unlimited users"],
+    id: "premium-monthly",
+    name: "Premium",
+    price: 999,
+    features: ["Unlimited stores", "Advanced inventory", "Unlimited users"],
   },
 ];
 
@@ -96,11 +90,16 @@ export default function Subscription() {
         },
         modal: {
           ondismiss: () => {
-            toast({
-              title: "Payment Cancelled",
-              description: "Subscription checkout cancelled.",
-            });
-            setLoading(false);
+            if (window.confirm("Are you sure you want to cancel checkout?")) {
+              toast({
+                title: "Payment Cancelled",
+                description: "Subscription checkout cancelled.",
+              });
+              setLoading(false);
+            } else {
+              // Reopen Razorpay checkout
+              setTimeout(() => startSubscription(), 100);
+            }
           },
         },
       };

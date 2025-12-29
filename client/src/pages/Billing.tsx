@@ -21,7 +21,7 @@ import { useBillStore } from "@/stores/billStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, type Bill, type BillItem } from "@/lib/api";
 import { Link } from "react-router-dom";
-import { Plus, Search, Receipt, IndianRupee, Eye } from "lucide-react";
+import { Plus, Search, Receipt, IndianRupee, Eye, Download, Printer, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -29,7 +29,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { generateInvoicePDF } from "@/lib/pdfGenerator";
+import { ThermalPrinter } from "@/lib/thermalPrinter";
 
 export default function Billing() {
   const { user } = useAuth();
@@ -75,6 +78,61 @@ export default function Billing() {
       });
     } finally {
       setItemsLoading(false);
+    }
+  };
+
+  const handlePrintPDF = () => {
+    if (!selectedBill || items.length === 0) return;
+
+    generateInvoicePDF({
+      billNumber: selectedBill.bill_number,
+      date: new Date(selectedBill.created_at),
+      items: items.map((i) => ({
+        id: i.id,
+        name: i.product_name || "Unknown Product",
+        quantity: i.quantity,
+        price: Number(i.unit_price),
+        total: Number(i.total_price),
+      })),
+      subtotal: Number(selectedBill.base_amount),
+      tax: Number(selectedBill.tax_amount),
+      total: Number(selectedBill.final_amount),
+      organizationName: user?.org_name || "PantryPal",
+    });
+
+    toast({
+      title: "Invoice Generated",
+      description: "Your PDF invoice is ready for download.",
+    });
+  };
+
+  const handlePrintThermal = async () => {
+    if (!selectedBill || items.length === 0) return;
+
+    try {
+      await ThermalPrinter.printReceipt({
+        organizationName: user?.org_name || "PantryPal",
+        billNumber: selectedBill.bill_number,
+        date: new Date(selectedBill.created_at),
+        items: items.map((i) => ({
+          name: (i.product_name || "Product").substring(0, 20),
+          quantity: i.quantity,
+          price: Number(i.unit_price),
+          total: Number(i.total_price),
+        })),
+        total: Number(selectedBill.final_amount),
+      });
+
+      toast({
+        title: "Printing Started",
+        description: "The receipt has been sent to the thermal printer.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Printing Failed",
+        description: error.message || "Could not connect to the printer.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -184,12 +242,12 @@ export default function Billing() {
               ₹
               {billStore.bills.length > 0
                 ? Math.round(
-                    billStore.bills.reduce(
-                      (sum: number, bill: Bill) =>
-                        sum + Number(bill.final_amount),
-                      0
-                    ) / billStore.bills.length
-                  )
+                  billStore.bills.reduce(
+                    (sum: number, bill: Bill) =>
+                      sum + Number(bill.final_amount),
+                    0
+                  ) / billStore.bills.length
+                )
                 : 0}
             </div>
           </CardContent>
@@ -358,6 +416,26 @@ export default function Billing() {
               </div>
             )}
           </div>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={handlePrintThermal}
+              disabled={itemsLoading || items.length === 0}
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Thermal Print
+            </Button>
+            <Button
+              variant="default"
+              className="w-full sm:w-auto"
+              onClick={handlePrintPDF}
+              disabled={itemsLoading || items.length === 0}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Professional PDF
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

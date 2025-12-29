@@ -19,6 +19,9 @@ import {
   CheckCircle2,
   XCircle,
   Users,
+  AlertCircle,
+  FileCheck,
+  Zap,
 } from "lucide-react";
 
 interface OrganizationData {
@@ -27,6 +30,15 @@ interface OrganizationData {
     name: string;
     createdAt: string;
     totalStores: number;
+    planName: string;
+    paymentStatus: string;
+    kycStatus: string;
+    gstNumber: string | null;
+    ownerName: string | null;
+    ownerEmail: string | null;
+    ownerPhone: string | null;
+    businessCity: string | null;
+    businessState: string | null;
   };
   currentStore: {
     id: string;
@@ -213,6 +225,48 @@ export default function Profile() {
                   </div>
                 </div>
               </div>
+
+              {/* Vendor Details (if available) */}
+              {orgData.organization.gstNumber && (
+                <div className="pt-2 space-y-3">
+                  <label className="text-xs font-semibold text-muted-foreground">
+                    Vendor Details
+                  </label>
+                  <div className="grid md:grid-cols-2 gap-3">
+                    {orgData.organization.gstNumber && (
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">
+                          GST Number
+                        </label>
+                        <div className="px-3 py-2 rounded-md border bg-background text-sm font-mono">
+                          {orgData.organization.gstNumber}
+                        </div>
+                      </div>
+                    )}
+                    {orgData.organization.ownerName && (
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">
+                          Owner
+                        </label>
+                        <div className="px-3 py-2 rounded-md border bg-background text-sm">
+                          {orgData.organization.ownerName}
+                        </div>
+                      </div>
+                    )}
+                    {orgData.organization.businessCity && (
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">
+                          City, State
+                        </label>
+                        <div className="px-3 py-2 rounded-md border bg-background text-sm">
+                          {orgData.organization.businessCity},{" "}
+                          {orgData.organization.businessState}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
@@ -325,86 +379,143 @@ export default function Profile() {
             <Crown className="h-6 w-6" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold">Subscription</h2>
+            <h2 className="text-lg font-semibold">Subscription & Compliance</h2>
             <p className="text-xs text-muted-foreground">
-              Your plan & features
+              Plan, payment & verification status
             </p>
           </div>
         </div>
         <Separator />
-        <div className="space-y-4">
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">
-                Current Plan
-              </label>
-              <div className="px-4 py-3 rounded-lg border-2 border-emerald-500 bg-emerald-50/50">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-emerald-700">Free Trial</span>
-                  <Crown className="h-5 w-5 text-emerald-600" />
+        {orgLoading ? (
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        ) : orgData ? (
+          <div className="space-y-4">
+            <div className="grid md:grid-cols-3 gap-4">
+              {/* Plan */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Zap className="h-3 w-3" />
+                  Current Plan
+                </label>
+                <div className="px-4 py-3 rounded-lg border-2 border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/20">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-emerald-700 dark:text-emerald-200 capitalize">
+                      {orgData.organization.planName || "Free Trial"}
+                    </span>
+                    <Crown className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Status */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Zap className="h-3 w-3" />
+                  Payment Status
+                </label>
+                <div className="px-4 py-3 rounded-lg border bg-background dark:bg-gray-900/50">
+                  <div className="flex items-center gap-2">
+                    {orgData.organization.paymentStatus === "active" ? (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <span className="font-medium text-sm capitalize">
+                          {orgData.organization.paymentStatus}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="h-4 w-4 text-yellow-600" />
+                        <span className="font-medium text-sm capitalize">
+                          {orgData.organization.paymentStatus || "pending"}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* KYC Status */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <FileCheck className="h-3 w-3" />
+                  Verification
+                </label>
+                <div className="px-4 py-3 rounded-lg border bg-background dark:bg-gray-900/50">
+                  <div className="flex items-center gap-2">
+                    {orgData.organization.kycStatus === "verified" ? (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <span className="font-medium text-sm capitalize text-green-700">
+                          Verified
+                        </span>
+                      </>
+                    ) : orgData.organization.kycStatus === "rejected" ? (
+                      <>
+                        <XCircle className="h-4 w-4 text-red-600" />
+                        <span className="font-medium text-sm text-red-700">
+                          Rejected
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="h-4 w-4 text-yellow-600" />
+                        <span className="font-medium text-sm capitalize text-yellow-700">
+                          Pending
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="space-y-2">
+
+            {/* Plan Features */}
+            <div className="space-y-3 pt-2">
               <label className="text-xs font-medium text-muted-foreground">
-                Status
+                Features Included
               </label>
-              <div className="px-4 py-3 rounded-lg border bg-background">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <span className="font-medium text-sm">Active</span>
+              <div className="grid md:grid-cols-2 gap-3">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-background dark:bg-gray-900/50">
+                  <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <span className="text-sm">Unlimited Products</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-background dark:bg-gray-900/50">
+                  <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <span className="text-sm">Inventory Management</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-background dark:bg-gray-900/50">
+                  <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <span className="text-sm">QR Code Generation</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-background dark:bg-gray-900/50">
+                  <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <span className="text-sm">Expiry Alerts</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-background dark:bg-gray-900/50">
+                  <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <span className="text-sm">Multi-Store Support</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-background dark:bg-gray-900/50">
+                  <Users className="h-4 w-4 text-orange-600 flex-shrink-0" />
+                  <span className="text-sm">Team Management</span>
                 </div>
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">
-                Expires On
-              </label>
-              <div className="px-4 py-3 rounded-lg border bg-background">
-                <span className="text-sm font-medium">Never</span>
-              </div>
-            </div>
-          </div>
 
-          <div className="space-y-3">
-            <label className="text-xs font-medium text-muted-foreground">
-              Features Included
-            </label>
-            <div className="grid md:grid-cols-2 gap-3">
-              <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-background">
-                <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                <span className="text-sm">Unlimited Products</span>
+            {orgData.organization.paymentStatus !== "active" && (
+              <div className="pt-2">
+                <Button className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700">
+                  <Crown className="h-4 w-4 mr-2" />
+                  Upgrade Plan
+                </Button>
               </div>
-              <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-background">
-                <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                <span className="text-sm">Inventory Management</span>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-background">
-                <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                <span className="text-sm">QR Code Generation</span>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-background">
-                <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                <span className="text-sm">Expiry Alerts</span>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-background">
-                <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                <span className="text-sm">Multi-Store Support</span>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-background">
-                <Users className="h-4 w-4 text-orange-600 flex-shrink-0" />
-                <span className="text-sm">Team Management</span>
-              </div>
-            </div>
+            )}
           </div>
-
-          <div className="pt-2">
-            <Button className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700">
-              <Crown className="h-4 w-4 mr-2" />
-              Upgrade Plan
-            </Button>
-          </div>
-        </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No subscription data available
+          </p>
+        )}
       </Card>
       <Card className="p-6 space-y-4">
         {" "}

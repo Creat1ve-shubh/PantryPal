@@ -32,6 +32,8 @@ Technical architecture, design decisions, and structure overview for PantryPal.
 - **Animations**: Framer Motion
 - **Icons**: Lucide React
 - **QR/Barcode**: qr-scanner, qrcode, react-qr-code
+- **Printing**: Web Serial API, jspdf, jspdf-autotable
+- **PWA**: vite-plugin-pwa (service workers, offline caching)
 
 ### Backend
 
@@ -54,9 +56,10 @@ Technical architecture, design decisions, and structure overview for PantryPal.
 
 ### DevOps & Tooling
 
+- **Web Server**: NGINX (Reverse proxy & Static serving)
 - **Container**: Docker multi-stage builds
 - **Orchestration**: Docker Compose
-- **Testing**: Vitest (unit), Playwright (e2e) - planned
+- **Testing**: Vitest (unit), Playwright (e2e)
 - **Linting**: ESLint + Prettier
 - **Package Manager**: npm
 
@@ -64,29 +67,28 @@ Technical architecture, design decisions, and structure overview for PantryPal.
 
 ## System Architecture
 
-### Current: Monolithic Deployment
+### Production Architecture
 
 ```
-┌─────────────────────────────────────┐
-│         Docker Container            │
-│                                     │
-│  ┌─────────────────────────────┐  │
-│  │      Express Server         │  │
-│  │  ┌────────────────────────┐ │  │
-│  │  │   API Routes (/api/*)  │ │  │
-│  │  └────────────────────────┘ │  │
-│  │  ┌────────────────────────┐ │  │
-│  │  │  Static File Serving   │ │  │
-│  │  │  (React Build)         │ │  │
-│  │  └────────────────────────┘ │  │
-│  └─────────────────────────────┘  │
-│                                     │
-└─────────────────────────────────────┘
-              ↓
-    ┌─────────────────┐
-    │  PostgreSQL DB  │
-    │  (Neon/hosted)  │
-    └─────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                    Docker Network                       │
+│                                                         │
+│  ┌──────────────────┐         ┌──────────────────┐      │
+│  │      NGINX       │         │  Express Server  │      │
+│  │ (Reverse Proxy)  │────────→│  (Node.js App)   │      │
+│  └────────┬─────────┘         └────────┬─────────┘      │
+│           │                            │                │
+│  ┌────────▼─────────┐         ┌────────▼─────────┐      │
+│  │ Static Elements  │         │  API / WebSocket │      │
+│  │  (PWA / Assets)  │         │  (Auth / DB)     │      │
+│  └──────────────────┘         └──────────────────┘      │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+              │                           │
+    ┌────────▼─────────┐        ┌────────▼─────────┐
+    │  Web Browser     │        │  PostgreSQL DB   │
+    │  (Offline PWA)   │        │   (Neon/PG)      │
+    └──────────────────┘        └──────────────────┘
 ```
 
 ### Future: Scaled Architecture

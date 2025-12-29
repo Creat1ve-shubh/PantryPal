@@ -21,14 +21,26 @@ import {
 } from "./models/dtos";
 import { validateRequestBody } from "./middleware/validation";
 import dotenv from "dotenv";
+
 import type { SQL } from "drizzle-orm";
 import { z } from "zod";
 import crypto from "crypto";
 import { env } from "./config/env";
 
+// Import product image router
+
 dotenv.config();
 
+// --- Razorpay SDK import and initialization ---
+import Razorpay from "razorpay";
+const razorpay = new Razorpay({
+  key_id: env.RAZORPAY_KEY_ID,
+  key_secret: env.RAZORPAY_KEY_SECRET,
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Register product image proxy route
+
   // Barcode/QR Code Search API - Fast product lookup by code
   app.get(
     "/api/products/search/:code",
@@ -227,28 +239,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Payments (Razorpay) Endpoints
   // ============================
   // Create subscription intent (server creates subscription/order metadata)
+
   app.post(
     "/api/payments/create-subscription",
     asyncHandler(async (req, res) => {
-      // Minimal scaffold: validate plan and return payload for frontend checkout
       const bodySchema = z.object({
         plan: z.string().default(env.SUBSCRIPTION_DEFAULT_PLAN),
         metadata: z.record(z.any()).optional(),
       });
       const { plan, metadata } = bodySchema.parse(req.body || {});
 
-      // In a real integration, call Razorpay Subscriptions API here.
-      // For now, return a mock payload including the public key for checkout.
-      const subscriptionId = `sub_${Date.now()}`;
-      res.status(200).json({
-        ok: true,
-        provider: "razorpay",
-        key_id: env.RAZORPAY_KEY_ID || "",
-        plan,
-        subscription_id: subscriptionId,
-        metadata: metadata || {},
-        // Frontend should open Razorpay Checkout with this data
-      });
+      // Map frontend plan keys to actual Razorpay plan_ids from environment variables
+      // Map frontend plan keys to actual Razorpay plan_ids (from .env.production)
+      const planMap = {
+        "starter-monthly": "plan_RvVENJ3WVsVpbi",
+        "professional-monthly": "plan_RvVEnDRX3Tq20k", // Add the correct plan_id for Professional if available
+        "enterprise-monthly": env.RAZORPAY_ENTERPRISE_PLAN_ID, // Add this to .env.production if you have an Enterprise plan
+        "premium-monthly": "plan_RvVEnDRX3Tq20k", // If 'premium' is an alias for 'professional', otherwise update accordingly
+      };
+      const plan_id = planMap[plan];
+      if (!plan_id) {
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid plan selected or plan_id not set in environment.",
+        });
+      }
+      try {
+        const subscription = await razorpay.subscriptions.create({
+          plan_id,
+          customer_notify: 1,
+          total_count: 12, // e.g., for 12 months
+        });
+        res.status(200).json({
+          ok: true,
+          provider: "razorpay",
+          key_id: env.RAZORPAY_KEY_ID || "",
+          plan,
+          subscription_id: subscription.id,
+          metadata: metadata || {},
+        });
+      } catch (error) {
+        console.error("Razorpay subscription error:", error);
+        res.status(500).json({ ok: false, error: error.message });
+      }
     })
   );
 
@@ -752,6 +785,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           roleId: user_roles.role_id,
           orgName: organizations.name,
           orgCreatedAt: organizations.created_at,
+          planName: organizations.plan_name,
+          paymentStatus: organizations.payment_status,
+          kycStatus: organizations.kyc_status,
+          gstNumber: organizations.gst_number,
+          ownerName: organizations.owner_name,
+          ownerEmail: organizations.owner_email,
+          ownerPhone: organizations.owner_phone,
+          businessCity: organizations.business_city,
+          businessState: organizations.business_state,
           storeName: stores.name,
           storeCreatedAt: stores.created_at,
           roleName: roles.name,
@@ -785,6 +827,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: data.orgName,
           createdAt: data.orgCreatedAt,
           totalStores: orgStores.length,
+          planName: data.planName,
+          paymentStatus: data.paymentStatus,
+          kycStatus: data.kycStatus,
+          gstNumber: data.gstNumber,
+          ownerName: data.ownerName,
+          ownerEmail: data.ownerEmail,
+          ownerPhone: data.ownerPhone,
+          businessCity: data.businessCity,
+          businessState: data.businessState,
         },
         currentStore: data.storeId
           ? {

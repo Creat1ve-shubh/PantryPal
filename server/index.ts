@@ -28,6 +28,7 @@ console.log(`🔐 SESSION_SECURE: ${process.env.SESSION_SECURE}`);
 console.log(`🍪 SESSION_SAME_SITE: ${process.env.SESSION_SAME_SITE}`);
 
 const app = express();
+export default app;
 
 // Initialize Sentry if DSN provided
 if (process.env.SENTRY_DSN) {
@@ -61,7 +62,27 @@ const isDev = app.get("env") === "development";
 app.use(
   helmet({
     // In dev, disable CSP so Vite/react-refresh inline preambles and overlays can run
-    contentSecurityPolicy: isDev ? false : undefined,
+    contentSecurityPolicy: isDev
+      ? false
+      : {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "https://checkout.razorpay.com"],
+          scriptSrcElem: ["'self'", "https://checkout.razorpay.com"],
+          frameSrc: [
+            "'self'",
+            "https://api.razorpay.com",
+            "https://checkout.razorpay.com",
+          ],
+          connectSrc: [
+            "'self'",
+            "https://lumberjack.razorpay.com",
+            "https://api.razorpay.com",
+            "https://checkout.razorpay.com",
+          ],
+          // Add other directives as needed
+        },
+      },
     crossOriginEmbedderPolicy: isDev ? false : undefined,
   })
 );
@@ -109,6 +130,7 @@ app.use((req, res, next) => {
   next();
 });
 
+// Always register routes and middleware, so tests work too
 (async () => {
   // Setup auth routes first
   setupAuthRoutes(app);
@@ -128,7 +150,7 @@ app.use((req, res, next) => {
   // Serve static files or use Vite in dev mode
   if (app.get("env") === "development") {
     await setupVite(app, server);
-  } else {
+  } else if (process.env.NODE_ENV !== "test") {
     serveStatic(app);
   }
 
@@ -137,18 +159,27 @@ app.use((req, res, next) => {
     app.use(Sentry.expressErrorHandler());
   }
 
-  // Use dynamic host/port
-  const PORT = parseInt(process.env.PORT || "5000", 10);
-  const HOST = process.env.HOST || "127.0.0.1";
+  // Skip server startup during tests to avoid port conflicts
+  // Tests import this file but should not start the HTTP server
+  const isTestEnvironment = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test';
 
-  try {
+  if (!isTestEnvironment) {
+    const PORT = parseInt(process.env.PORT || "5000", 10);
+    const HOST = process.env.HOST || "127.0.0.1";
+
     server.listen(PORT, HOST, () => {
       log(`🚀 Server running on http://${HOST}:${PORT}`);
-    });
-  } catch (err) {
-    log(`❌ Cannot bind to ${HOST}:${PORT}, trying localhost`);
-    server.listen(PORT, () => {
-      log(`🚀 Server running on http://localhost:${PORT}`);
+    }).on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EADDRINUSE') {
+        log(`❌ Port ${PORT} already in use, trying alternate port`);
+        server.listen(0, HOST, () => {
+          const addr = server.address();
+          const port = typeof addr === 'object' && addr ? addr.port : PORT;
+          log(`🚀 Server running on http://${HOST}:${port}`);
+        });
+      } else {
+        throw err;
+      }
     });
   }
 })();

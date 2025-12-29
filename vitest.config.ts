@@ -9,8 +9,12 @@ export default defineConfig({
     include: ["tests/unit/**/*.test.ts", "tests/integration/**/*.test.ts"],
     exclude: ["tests/e2e/**/*", "node_modules/**/*"],
     reporters: ["default", "./tests/reporter.ts"],
-    hookTimeout: 30000, // Increase from 10s to 30s for DB setup operations
-    testTimeout: 15000, // Increase test timeout to 15s
+    hookTimeout: 60000, // 60s for DB setup operations
+    testTimeout: 30000, // 30s for individual tests
+    // Run test files sequentially to avoid Neon connection pool exhaustion
+    fileParallelism: false,
+    // Use forks pool for better isolation
+    pool: 'forks',
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
