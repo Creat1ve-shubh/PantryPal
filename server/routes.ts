@@ -263,12 +263,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { plan, metadata } = bodySchema.parse(req.body || {});
 
       // Map frontend plan keys to actual Razorpay plan_ids from environment variables
-      // Map frontend plan keys to actual Razorpay plan_ids (from .env.production)
-      const planMap = {
-        "starter-monthly": "plan_RvVENJ3WVsVpbi",
-        "professional-monthly": "plan_RvVEnDRX3Tq20k", // Add the correct plan_id for Professional if available
-        "enterprise-monthly": env.RAZORPAY_ENTERPRISE_PLAN_ID, // Add this to .env.production if you have an Enterprise plan
-        "premium-monthly": "plan_RvVEnDRX3Tq20k", // If 'premium' is an alias for 'professional', otherwise update accordingly
+      const planMap: Record<string, string | undefined> = {
+        "starter-monthly": env.RAZORPAY_PLAN_ID_STARTER_MONTHLY,
+        "premium-monthly": env.RAZORPAY_PLAN_ID_PREMIUM_MONTHLY,
+        // Aliases / optional tiers
+        "professional-monthly":
+          env.RAZORPAY_PLAN_ID_PROFESSIONAL_MONTHLY ||
+          env.RAZORPAY_PLAN_ID_PREMIUM_MONTHLY,
+        "enterprise-monthly": env.RAZORPAY_PLAN_ID_ENTERPRISE_MONTHLY,
       };
       const plan_id = planMap[plan];
       if (!plan_id) {
@@ -293,7 +295,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } catch (error) {
         console.error("Razorpay subscription error:", error);
-        res.status(500).json({ ok: false, error: error.message });
+        const message = error instanceof Error ? error.message : String(error);
+        res.status(500).json({ ok: false, error: message });
       }
     })
   );
@@ -307,6 +310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         razorpay_subscription_id: z.string().optional(),
         razorpay_order_id: z.string().optional(),
         razorpay_signature: z.string(),
+        plan: z.string().optional(),
       });
       const payload = verifySchema.parse(req.body || {});
 
@@ -335,6 +339,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           payload.razorpay_order_id ||
           payload.razorpay_payment_id,
         roles: ["onboarding"],
+        plan: payload.plan,
       });
 
       res.status(200).json({ ok: true, onboardingToken });

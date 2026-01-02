@@ -7,10 +7,11 @@ import {
   user_roles,
   roles,
 } from "../../shared/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { hashToken, signAccessToken, signRefreshToken } from "../utils/jwt";
+import { getPlanLimits } from "../utils/planLimits";
 
 const SALT_ROUNDS = Number(process.env.BCRYPT_COST || 12);
 const PASSWORD_PEPPER = process.env.PASSWORD_PEPPER || "";
@@ -226,6 +227,78 @@ export async function createInvite(params: {
   const token_hash = hashToken(rawToken);
   const expires_at = new Date(Date.now() + expires_in_hours * 3600 * 1000);
 
+  // Enforce plan-based role limits for the org (Starter 399 plan)
+  const [org] = await db
+    .select({ plan_name: organizations.plan_name })
+    .from(organizations)
+    .where(eq(organizations.id, org_id))
+    .limit(1);
+  const planLimits = getPlanLimits(org?.plan_name);
+
+  const [targetRole] = await db
+    .select({ name: roles.name })
+    .from(roles)
+    .where(eq(roles.id, role_id))
+    .limit(1);
+  const targetRoleName = targetRole?.name;
+
+  const limitConfig: { roleNames: string[]; max: number } | undefined =
+    targetRoleName === "store_manager"
+      ? {
+          roleNames: ["store_manager"],
+          max: planLimits.maxRoleUsers.store_manager,
+        }
+      : targetRoleName === "inventory_manager"
+      ? {
+          roleNames: ["inventory_manager"],
+          max: planLimits.maxRoleUsers.inventory_manager,
+        }
+      : targetRoleName === "admin" || targetRoleName === "store_owner"
+      ? {
+          roleNames: ["admin", "store_owner"],
+          max: planLimits.maxRoleUsers.adminOrOwner,
+        }
+      : undefined;
+
+  if (limitConfig && Number.isFinite(limitConfig.max)) {
+    // Count distinct users already assigned (org-wide)
+    const existingRows = await db
+      .select({
+        count: sql<number>`count(distinct ${user_roles.user_id})`,
+      })
+      .from(user_roles)
+      .innerJoin(roles, eq(user_roles.role_id, roles.id))
+      .where(
+        and(
+          eq(user_roles.org_id, org_id),
+          inArray(roles.name, limitConfig.roleNames)
+        )
+      );
+    const existingCount = Number(existingRows?.[0]?.count || 0);
+
+    // Count pending invites (to avoid over-inviting)
+    const pendingInvitesRows = await db
+      .select({
+        count: sql<number>`count(*)`,
+      })
+      .from(user_invites)
+      .where(
+        and(
+          eq(user_invites.org_id, org_id),
+          eq(user_invites.role_id, role_id),
+          sql`${user_invites.accepted_at} IS NULL`,
+          sql`${user_invites.expires_at} > now()`
+        )
+      );
+    const pendingCount = Number(pendingInvitesRows?.[0]?.count || 0);
+
+    if (existingCount + pendingCount >= limitConfig.max) {
+      throw new Error(
+        `Plan limit exceeded for role ${targetRoleName}: max ${limitConfig.max}`
+      );
+    }
+  }
+
   const [invite] = await db
     .insert(user_invites)
     .values({
@@ -259,6 +332,60 @@ export async function acceptInvite(
   if (invite.accepted_at) throw new Error("Invite already used");
   if (new Date(invite.expires_at) < new Date())
     throw new Error("Invite expired");
+
+  // Enforce plan limits before creating assignment
+  const [org] = await db
+    .select({ plan_name: organizations.plan_name })
+    .from(organizations)
+    .where(eq(organizations.id, invite.org_id))
+    .limit(1);
+  const planLimits = getPlanLimits(org?.plan_name);
+
+  const [targetRole] = await db
+    .select({ name: roles.name })
+    .from(roles)
+    .where(eq(roles.id, invite.role_id))
+    .limit(1);
+  const targetRoleName = targetRole?.name;
+
+  const acceptLimitConfig: { roleNames: string[]; max: number } | undefined =
+    targetRoleName === "store_manager"
+      ? {
+          roleNames: ["store_manager"],
+          max: planLimits.maxRoleUsers.store_manager,
+        }
+      : targetRoleName === "inventory_manager"
+      ? {
+          roleNames: ["inventory_manager"],
+          max: planLimits.maxRoleUsers.inventory_manager,
+        }
+      : targetRoleName === "admin" || targetRoleName === "store_owner"
+      ? {
+          roleNames: ["admin", "store_owner"],
+          max: planLimits.maxRoleUsers.adminOrOwner,
+        }
+      : undefined;
+
+  if (acceptLimitConfig && Number.isFinite(acceptLimitConfig.max)) {
+    const existingRows = await db
+      .select({
+        count: sql<number>`count(distinct ${user_roles.user_id})`,
+      })
+      .from(user_roles)
+      .innerJoin(roles, eq(user_roles.role_id, roles.id))
+      .where(
+        and(
+          eq(user_roles.org_id, invite.org_id),
+          inArray(roles.name, acceptLimitConfig.roleNames)
+        )
+      );
+    const existingCount = Number(existingRows?.[0]?.count || 0);
+    if (existingCount >= acceptLimitConfig.max) {
+      throw new Error(
+        `Plan limit exceeded for role ${targetRoleName}: max ${acceptLimitConfig.max}`
+      );
+    }
+  }
 
   // create user if not exists
   const [existing] = await db

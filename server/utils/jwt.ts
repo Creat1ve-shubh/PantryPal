@@ -30,6 +30,7 @@ export type JwtAccessPayload = {
   sub: string | number;
   orgId?: string;
   roles?: string[]; // convenience; actual authorization loads from DB
+  plan?: string; // used for onboarding token + subscription gating
 };
 
 export type JwtRefreshPayload = {

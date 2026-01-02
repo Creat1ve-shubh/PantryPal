@@ -7,6 +7,8 @@ import { eq } from "drizzle-orm";
 import { hashPassword, isAuthenticated, hasRole } from "./auth";
 import { requireOrgId } from "./middleware/tenantContext";
 import { registerSchema, loginSchema } from "../shared/schema";
+import { verifyAccessToken } from "./utils/jwt";
+import { getPlanLimits } from "./utils/planLimits";
 
 export function setupAuthRoutes(app: Express) {
   // Register new user (admin only for creating other users)
@@ -77,6 +79,40 @@ export function setupAuthRoutes(app: Express) {
     try {
       const parsed = organizationRegistrationSchema.parse(req.body);
 
+      // Optional onboarding token (issued by /api/payments/verify).
+      // When present, we validate it and use it to set org plan/subscription.
+      const onboardingToken = (req.body as any)?.onboarding_token as
+        | string
+        | undefined;
+      let planNameFromToken: string | undefined;
+      let subscriptionIdFromToken: string | undefined;
+      if (onboardingToken) {
+        try {
+          const payload = verifyAccessToken(onboardingToken) as any;
+          const roles = Array.isArray(payload?.roles) ? payload.roles : [];
+          if (!roles.includes("onboarding")) {
+            return res.status(401).json({ error: "Invalid onboarding token" });
+          }
+          if (payload?.plan && typeof payload.plan === "string") {
+            planNameFromToken = payload.plan;
+          }
+          if (payload?.sub && typeof payload.sub === "string") {
+            subscriptionIdFromToken = payload.sub;
+          }
+        } catch (e) {
+          return res.status(401).json({ error: "Invalid onboarding token" });
+        }
+      }
+
+      // Enforce plan-based store limit (Starter 399: 1 store).
+      const planLimits = getPlanLimits(planNameFromToken);
+      if (parsed.stores.length > planLimits.maxStores) {
+        return res.status(400).json({
+          error: "Plan limit exceeded",
+          details: `Your plan allows up to ${planLimits.maxStores} store(s).`,
+        });
+      }
+
       // Basic uniqueness checks for username/email
       const existingUser = await db
         .select()
@@ -112,6 +148,8 @@ export function setupAuthRoutes(app: Express) {
           business_pin: vendor.business_pin || null,
           kyc_status: "pending", // Requires admin verification
           payment_status: "pending", // Set from Razorpay webhook later
+          subscription_id: subscriptionIdFromToken || null,
+          plan_name: planNameFromToken || "starter",
         })
         .returning();
 

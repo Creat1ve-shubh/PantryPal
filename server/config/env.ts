@@ -153,6 +153,10 @@ const envSchema = z.object({
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+  RAZORPAY_PLAN_ID_STARTER_MONTHLY: z.string().optional(),
+  RAZORPAY_PLAN_ID_PREMIUM_MONTHLY: z.string().optional(),
+  RAZORPAY_PLAN_ID_PROFESSIONAL_MONTHLY: z.string().optional(),
+  RAZORPAY_PLAN_ID_ENTERPRISE_MONTHLY: z.string().optional(),
   SUBSCRIPTION_DEFAULT_PLAN: z.string().default("starter-monthly"),
 });
 
