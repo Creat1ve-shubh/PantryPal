@@ -21,3 +21,5 @@ ALTER TABLE organizations ADD COLUMN
 IF NOT EXISTS verified_at timestamptz;
 ALTER TABLE organizations ADD COLUMN
 IF NOT EXISTS verified_by integer;
+ALTER TABLE organizations ADD COLUMN
+IF NOT EXISTS verification_notes text;
