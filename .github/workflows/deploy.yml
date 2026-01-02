@@ -24,10 +24,15 @@ jobs:
       - name: Install dependencies
         run: npm install
       
+      - name: Setup Environment
+        run: |
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
+          echo "SESSION_SECRET=test-secret" >> .env
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      
       - name: Sync Database Schema
         run: npx drizzle-kit push --force
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgres://localhost/test' }}
       
       - name: Lint NGINX Configuration
         run: |
@@ -37,15 +42,9 @@ jobs:
       
       - name: Run Unit Tests
         run: npm test -- tests/unit --run
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgres://localhost/test' }}
-          SESSION_SECRET: "test-secret"
       
       - name: Run Integration Tests
         run: npm test -- tests/integration --run
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgres://localhost/test' }}
-          SESSION_SECRET: "test-secret"
 
   build-pwa:
     name: Verify PWA & Build
