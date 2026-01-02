@@ -24,8 +24,8 @@ jobs:
       - name: Install dependencies
         run: npm install
       
-      - name: Run Database Migrations
-        run: npx drizzle-kit migrate
+      - name: Sync Database Schema
+        run: npx drizzle-kit push --force
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgres://localhost/test' }}
       
