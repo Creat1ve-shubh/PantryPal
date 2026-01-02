@@ -1,0 +1,2 @@
+-- This migration has already been applied to the database
+-- Placeholder file for migration journal consistency

@@ -36,6 +36,41 @@
       "when": 1767027239813,
       "tag": "0004_late_green_goblin",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1767027239814,
+      "tag": "0005_bills_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1767027239815,
+      "tag": "0006_bill_items_org_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1767027239816,
+      "tag": "0007_bill_finalization_credit_notes",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1767027239817,
+      "tag": "0008_add_gst_number_to_organizations",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1767027239818,
+      "tag": "0009_add_org_vendor_columns",
+      "breakpoints": true
     }
   ]
 }
