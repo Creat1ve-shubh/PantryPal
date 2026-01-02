@@ -93,6 +93,27 @@ async function ensureProductsColumns(pool: Pool) {
   );
 }
 
+async function ensureBillsColumns(pool: Pool) {
+  // Older schemas may not have finalization metadata yet.
+  await pool.query(
+    `ALTER TABLE bills ADD COLUMN IF NOT EXISTS finalized_at timestamp;`
+  );
+  await pool.query(
+    `ALTER TABLE bills ADD COLUMN IF NOT EXISTS finalized_by text;`
+  );
+
+  // Common bill fields that appear in shared/schema.ts
+  await pool.query(
+    `ALTER TABLE bills ADD COLUMN IF NOT EXISTS discount_amount numeric(10, 2) DEFAULT '0';`
+  );
+  await pool.query(
+    `ALTER TABLE bills ADD COLUMN IF NOT EXISTS tax_amount numeric(10, 2) DEFAULT '0';`
+  );
+  await pool.query(
+    `ALTER TABLE bills ADD COLUMN IF NOT EXISTS payment_method text DEFAULT 'cash';`
+  );
+}
+
 beforeAll(async () => {
   console.log(`🧪 Test DB Connection: ${connectionString.substring(0, 20)}...`);
 
@@ -102,6 +123,7 @@ beforeAll(async () => {
 
   await ensureOrganizationsColumns(testDb);
   await ensureProductsColumns(testDb);
+  await ensureBillsColumns(testDb);
 });
 
 afterAll(async () => {

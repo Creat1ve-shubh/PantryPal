@@ -13,6 +13,7 @@ import {
   bills,
   bill_items,
   credit_notes,
+  inventory_transactions,
 } from "../../shared/schema";
 import { eq } from "drizzle-orm";
 
@@ -315,6 +316,12 @@ describe("InventoryService", () => {
   });
 
   afterAll(async () => {
+    // Cleanup in FK-safe order (some CI DB schemas may not have cascade FKs)
+    if (testProductId) {
+      await db
+        .delete(inventory_transactions)
+        .where(eq(inventory_transactions.product_id, testProductId));
+    }
     if (testProductId) {
       await db.delete(products).where(eq(products.id, testProductId));
     }
