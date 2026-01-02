@@ -24,7 +24,6 @@ const lenis = new Lenis({
   duration: 1.2,
   orientation: "vertical",
   gestureOrientation: "vertical",
-  smoothTouch: false,
 });
 
 function raf(time: number) {
