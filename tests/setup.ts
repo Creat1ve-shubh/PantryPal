@@ -4,6 +4,31 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+function ensureMinLengthEnv(name: string, minLength: number, fallback: string) {
+  const value = process.env[name];
+  if (!value || value.length < minLength) {
+    process.env[name] = fallback;
+  }
+}
+
+// Some CI environments provide placeholder secrets that are too short.
+// This causes `server/config/env.ts` validation to throw before tests can run.
+ensureMinLengthEnv(
+  "SESSION_SECRET",
+  32,
+  "test-session-secret-min-32-chars-long-for-testing"
+);
+ensureMinLengthEnv(
+  "JWT_ACCESS_SECRET",
+  32,
+  "test-jwt-access-secret-min-32-chars-long-for-testing"
+);
+ensureMinLengthEnv(
+  "JWT_REFRESH_SECRET",
+  32,
+  "test-jwt-refresh-secret-min-32-chars-long-for-testing"
+);
+
 // Ensure the app DB client (server/db.ts) points at the test DB.
 const connectionString =
   process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
@@ -93,6 +118,25 @@ async function ensureProductsColumns(pool: Pool) {
   );
 }
 
+async function ensureProductsQrCodeUniquenessPerTenant(pool: Pool) {
+  // Tests and services assume QR codes are unique within an org (tenant), not globally.
+  // Some CI databases have a global unique constraint/index named `products_qr_code_unique`.
+  // Convert it to a per-tenant unique index on (org_id, qr_code).
+
+  // Drop either a constraint or index with this name, if present.
+  await pool.query(
+    `ALTER TABLE products DROP CONSTRAINT IF EXISTS products_qr_code_unique;`
+  );
+  await pool.query(`DROP INDEX IF EXISTS products_qr_code_unique;`);
+
+  // Recreate as a per-tenant unique index (ignore NULL qr_code values).
+  await pool.query(
+    `CREATE UNIQUE INDEX IF NOT EXISTS products_qr_code_unique
+     ON products (org_id, qr_code)
+     WHERE qr_code IS NOT NULL;`
+  );
+}
+
 async function ensureBillsColumns(pool: Pool) {
   // Older schemas may not have finalization metadata yet.
   await pool.query(
@@ -155,6 +199,7 @@ beforeAll(async () => {
 
   await ensureOrganizationsColumns(testDb);
   await ensureProductsColumns(testDb);
+  await ensureProductsQrCodeUniquenessPerTenant(testDb);
   await ensureBillsColumns(testDb);
   await ensureCreditNotesTable(testDb);
 });
