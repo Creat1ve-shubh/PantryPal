@@ -24,6 +24,11 @@ jobs:
       - name: Install dependencies
         run: npm install
       
+      - name: Run Database Migrations
+        run: npx drizzle-kit migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgres://localhost/test' }}
+      
       - name: Lint NGINX Configuration
         run: |
           sudo apt-get update && sudo apt-get install -y nginx
