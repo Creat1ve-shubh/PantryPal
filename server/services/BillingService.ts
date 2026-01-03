@@ -133,6 +133,28 @@ export class BillingService {
       throw new Error(`Cannot finalize empty bill ${billId}`);
     }
 
+    const totalAmountNumber = items.reduce((sum, item) => {
+      const line =
+        typeof item.total_price === "string"
+          ? parseFloat(item.total_price)
+          : Number(item.total_price);
+      return sum + (Number.isFinite(line) ? line : 0);
+    }, 0);
+
+    const discountNumber =
+      typeof bill.discount_amount === "string"
+        ? parseFloat(bill.discount_amount)
+        : Number(bill.discount_amount ?? 0);
+    const taxNumber =
+      typeof bill.tax_amount === "string"
+        ? parseFloat(bill.tax_amount)
+        : Number(bill.tax_amount ?? 0);
+
+    const finalAmountNumber =
+      totalAmountNumber -
+      (Number.isFinite(discountNumber) ? discountNumber : 0) +
+      (Number.isFinite(taxNumber) ? taxNumber : 0);
+
     // Validate stock availability for all items
     for (const item of items) {
       const product = await productRepository.findById(item.product_id, orgId);
@@ -190,7 +212,11 @@ export class BillingService {
         const finalizedBill = await billRepository.finalize(
           billId,
           orgId,
-          finalizedByUser
+          finalizedByUser,
+          {
+            total_amount: totalAmountNumber.toFixed(2),
+            final_amount: finalAmountNumber.toFixed(2),
+          }
         );
 
         if (!finalizedBill) {

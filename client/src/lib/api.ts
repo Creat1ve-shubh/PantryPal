@@ -74,6 +74,28 @@ export interface DashboardStats {
 }
 
 class ApiClient {
+  private async getErrorMessage(response: Response): Promise<string> {
+    const fallback = response.statusText || `HTTP ${response.status}`;
+
+    let text = "";
+    try {
+      text = await response.text();
+    } catch {
+      // ignore
+    }
+
+    if (!text) return fallback;
+
+    try {
+      const parsed = JSON.parse(text) as any;
+      const msg =
+        parsed?.details || parsed?.error || parsed?.message || parsed?.msg;
+      return msg ? String(msg) : fallback;
+    } catch {
+      return text || fallback;
+    }
+  }
+
   async get<T>(endpoint: string): Promise<T> {
     const response = await fetch(`${API_BASE}${endpoint}`, {
       credentials: "include", // Include cookies for authentication
@@ -83,7 +105,8 @@ class ApiClient {
         // Redirect to login if unauthorized
         window.location.href = "/login";
       }
-      throw new Error(`API Error: ${response.statusText}`);
+      const msg = await this.getErrorMessage(response);
+      throw new Error(`API Error: ${msg}`);
     }
     return response.json();
   }
@@ -101,7 +124,8 @@ class ApiClient {
       if (response.status === 401) {
         window.location.href = "/login";
       }
-      throw new Error(`API Error: ${response.statusText}`);
+      const msg = await this.getErrorMessage(response);
+      throw new Error(`API Error: ${msg}`);
     }
     return response.json();
   }
@@ -119,7 +143,8 @@ class ApiClient {
       if (response.status === 401) {
         window.location.href = "/login";
       }
-      throw new Error(`API Error: ${response.statusText}`);
+      const msg = await this.getErrorMessage(response);
+      throw new Error(`API Error: ${msg}`);
     }
     return response.json();
   }
@@ -147,7 +172,8 @@ class ApiClient {
       if (response.status === 404) {
         throw new Error(`No product found with code: ${code}`);
       }
-      throw new Error(`API Error: ${response.statusText}`);
+      const msg = await this.getErrorMessage(response);
+      throw new Error(`API Error: ${msg}`);
     }
     return response.json();
   }

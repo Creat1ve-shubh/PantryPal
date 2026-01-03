@@ -154,9 +154,13 @@ export default function AddProduct() {
       navigate("/inventory");
     } catch (error) {
       console.error("Error adding product:", error);
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "Failed to add product";
       toast({
         title: "Error",
-        description: "Failed to add product",
+        description: message,
         variant: "destructive",
       });
     } finally {

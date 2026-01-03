@@ -5,8 +5,15 @@ import { z } from "zod";
 export const batchSchema = z.object({
   batch_id: z.string().uuid().optional(),
   batch_number: z.string().min(1, "Batch number is required"),
-  arrival_date: z.string().datetime(),
-  expiry_date: z.string().datetime().optional(),
+  arrival_date: z
+    .string()
+    .refine((v) => !Number.isNaN(new Date(v).getTime()), "Invalid arrival_date")
+    .transform((v) => new Date(v).toISOString()),
+  expiry_date: z
+    .string()
+    .refine((v) => !Number.isNaN(new Date(v).getTime()), "Invalid expiry_date")
+    .transform((v) => new Date(v).toISOString())
+    .optional(),
   quantity: z.number().int().nonnegative(),
   shelf_location: z.string().optional(),
   barcode: z.string().optional(),
@@ -26,8 +33,19 @@ export const createProductRequestSchema = z.object({
   buying_cost: z
     .union([z.string(), z.number()])
     .transform((v) => (typeof v === "string" ? parseFloat(v) : v)),
-  manufacturing_date: z.string().datetime().optional(),
-  expiry_date: z.string().datetime().optional(),
+  manufacturing_date: z
+    .string()
+    .refine(
+      (v) => !Number.isNaN(new Date(v).getTime()),
+      "Invalid manufacturing_date"
+    )
+    .transform((v) => new Date(v).toISOString())
+    .optional(),
+  expiry_date: z
+    .string()
+    .refine((v) => !Number.isNaN(new Date(v).getTime()), "Invalid expiry_date")
+    .transform((v) => new Date(v).toISOString())
+    .optional(),
   quantity_in_stock: z.number().int().nonnegative().default(0),
   min_stock_level: z.number().int().nonnegative().default(5),
   unit: z.string().default("piece"),

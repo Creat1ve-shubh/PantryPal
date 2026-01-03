@@ -104,6 +104,22 @@ export function setupAuthRoutes(app: Express) {
         }
       }
 
+      // Replay protection: a single payment/subscription should map to a single org.
+      if (subscriptionIdFromToken) {
+        const existing = await db
+          .select()
+          .from(organizations)
+          .where(eq(organizations.subscription_id, subscriptionIdFromToken))
+          .limit(1);
+        if (existing.length) {
+          return res.status(409).json({
+            error: "Subscription already used",
+            details:
+              "This payment/subscription has already been used to register an organization.",
+          });
+        }
+      }
+
       // Enforce plan-based store limit (Starter 399: 1 store).
       const planLimits = getPlanLimits(planNameFromToken);
       if (parsed.stores.length > planLimits.maxStores) {

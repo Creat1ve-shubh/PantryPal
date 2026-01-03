@@ -68,10 +68,15 @@ export class BillRepository implements IRepository<Bill> {
    * Create a new bill (draft state)
    */
   async create(data: InsertBill, orgId: string): Promise<Bill> {
+    const totalAmount = (data as any).total_amount ?? "0";
+    const finalAmount = (data as any).final_amount ?? "0";
+
     const result = await db
       .insert(bills)
       .values({
         ...data,
+        total_amount: totalAmount as any,
+        final_amount: finalAmount as any,
         org_id: orgId as any,
       })
       .returning();
@@ -116,7 +121,11 @@ export class BillRepository implements IRepository<Bill> {
   async finalize(
     id: string,
     orgId: string,
-    finalizedBy: string
+    finalizedBy: string,
+    totals?: {
+      total_amount: string;
+      final_amount: string;
+    }
   ): Promise<Bill> {
     // Fetch to check state
     const bill = await this.findById(id, orgId);
@@ -133,6 +142,12 @@ export class BillRepository implements IRepository<Bill> {
       .set({
         finalized_at: new Date(),
         finalized_by: finalizedBy,
+        ...(totals
+          ? {
+              total_amount: totals.total_amount as any,
+              final_amount: totals.final_amount as any,
+            }
+          : {}),
       })
       .where(and(eq(bills.id, id), eq(bills.org_id, orgId)))
       .returning();
