@@ -68,7 +68,8 @@ export default function Inventory() {
     if (user?.org_id) {
       productStore.loadProducts(user.org_id);
     }
-  }, [user?.org_id, productStore]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.org_id]);
 
   // Filter and sort products
   useEffect(() => {
