@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { api, type Product } from "@/lib/api";
-import { useProductStore } from "@/stores/productStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { Plus, Search, QrCode, Trash2 } from "lucide-react";
@@ -51,7 +50,8 @@ import {
 
 export default function Inventory() {
   const { user } = useAuth();
-  const productStore = useProductStore();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(false);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -63,17 +63,32 @@ export default function Inventory() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const { toast } = useToast();
 
-  // Load products from store when org_id changes
-  useEffect(() => {
-    if (user?.org_id) {
-      productStore.loadProducts(user.org_id);
+  // Load products directly from API
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      const productsData = await api.getProducts();
+      setProducts(productsData);
+    } catch (error) {
+      console.error("Error loading products:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load products",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.org_id]);
+  };
+
+  // Load products on mount
+  useEffect(() => {
+    loadProducts();
+  }, []);
 
   // Filter and sort products
   useEffect(() => {
-    let filtered = productStore.products.filter(
+    let filtered = products.filter(
       (product: Product) =>
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -110,7 +125,7 @@ export default function Inventory() {
     });
 
     setFilteredProducts(filtered);
-  }, [productStore.products, searchTerm, categoryFilter, sortBy, sortOrder]);
+  }, [products, searchTerm, categoryFilter, sortBy, sortOrder]);
 
   const getStockStatus = (product: Product) => {
     const stock = product.quantity_in_stock || 0;
@@ -157,13 +172,9 @@ export default function Inventory() {
       await response.json();
 
       // Refresh product list to show new QR code
-      if (user?.org_id) {
-        await productStore.loadProducts(user.org_id);
-      }
+      await loadProducts();
 
-      const product = productStore.products.find(
-        (p: Product) => p.id === productId
-      );
+      const product = products.find((p: Product) => p.id === productId);
       if (product) {
         setSelectedProduct(product);
         setQrDialogOpen(true);
@@ -201,7 +212,8 @@ export default function Inventory() {
     if (!productToDelete) return;
 
     try {
-      await productStore.deleteProduct(productToDelete.id);
+      await api.deleteProduct(productToDelete.id);
+      await loadProducts();
       toast({
         title: "Success",
         description: "Product deleted successfully",
@@ -219,7 +231,7 @@ export default function Inventory() {
   };
 
   const categories = Array.from(
-    new Set(productStore.products.map((p: Product) => p.category))
+    new Set(products.map((p: Product) => p.category))
   ).sort();
 
   return (
@@ -324,9 +336,7 @@ export default function Inventory() {
             <CardTitle className="text-sm">Total Products</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {productStore.products.length}
-            </div>
+            <div className="text-2xl font-bold">{products.length}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Showing {filteredProducts.length} filtered
             </p>
@@ -352,7 +362,7 @@ export default function Inventory() {
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
               {
-                productStore.products.filter(
+                products.filter(
                   (p: Product) =>
                     (p.quantity_in_stock || 0) <= (p.min_stock_level || 0)
                 ).length
@@ -368,11 +378,11 @@ export default function Inventory() {
         <CardHeader>
           <CardTitle>Products</CardTitle>
           <CardDescription>
-            {filteredProducts.length} of {productStore.products.length} products
+            {filteredProducts.length} of {products.length} products
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {productStore.loading ? (
+          {loading ? (
             <div className="text-center py-8">Loading products...</div>
           ) : filteredProducts.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
