@@ -229,14 +229,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (req.body.manufacturing_date === "")
           req.body.manufacturing_date = undefined;
         if (req.body.expiry_date === "") req.body.expiry_date = undefined;
+        
+        // Ensure numeric fields are numbers, not strings
+        if (typeof req.body.quantity_in_stock === "string") {
+          req.body.quantity_in_stock = parseInt(req.body.quantity_in_stock) || 0;
+        }
+        if (typeof req.body.min_stock_level === "string") {
+          req.body.min_stock_level = parseInt(req.body.min_stock_level) || 5;
+        }
       }
       next();
     },
     validateRequestBody(createProductRequestSchema),
     asyncHandler(async (req, res) => {
       const orgId = requireOrgId(req);
-      const product = await productService.createProduct(req.body, orgId);
-      res.status(201).json(product);
+      try {
+        const product = await productService.createProduct(req.body, orgId);
+        res.status(201).json(product);
+      } catch (error) {
+        console.error("🔴 Product creation error:", {
+          error: error instanceof Error ? error.message : String(error),
+          requestBody: req.body,
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+        throw error;
+      }
     })
   );
 

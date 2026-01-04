@@ -12,6 +12,12 @@ export const validateRequestBody = (schema: ZodSchema) => {
       req.body = validated;
       next();
     } catch (err: any) {
+      console.error("🔴 Validation Error - Request Body:", {
+        body: req.body,
+        errors: err.errors,
+        firstError: err.errors?.[0],
+      });
+      
       const errorResponse: ErrorResponse = {
         error: "Validation error",
         details: err.errors?.[0]?.message || err.message,
@@ -32,6 +38,10 @@ export const validateRequestQuery = (schema: ZodSchema) => {
       req.query = validated;
       next();
     } catch (err: any) {
+      console.error("🔴 Validation Error - Query:", {
+        query: req.query,
+        errors: err.errors,
+      });
       const errorResponse: ErrorResponse = {
         error: "Query validation error",
         details: err.errors?.[0]?.message || err.message,

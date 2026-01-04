@@ -138,14 +138,26 @@ export default function AddProduct() {
 
     setIsSubmitting(true);
     try {
-      await api.createProduct({
-        ...formData,
-        mrp: formData.mrp,
-        buying_cost: formData.buying_cost,
+      // Prepare product data with proper type conversion
+      const productData = {
+        name: formData.name?.trim(),
+        category: formData.category?.trim(),
+        brand: formData.brand?.trim() || undefined,
+        barcode: formData.barcode?.trim() || undefined,
+        qr_code: generatedQR || undefined,
+        mrp: parseFloat(formData.mrp) || 0,
+        buying_cost: parseFloat(formData.buying_cost) || 0,
+        manufacturing_date: formData.manufacturing_date || undefined,
+        expiry_date: formData.expiry_date || undefined,
         quantity_in_stock: parseInt(formData.quantity_in_stock) || 0,
         min_stock_level: parseInt(formData.min_stock_level) || 5,
-        qr_code: generatedQR,
-      });
+        unit: formData.unit || "piece",
+        description: formData.description?.trim() || undefined,
+      };
+      
+      console.log("📤 Sending product data:", productData);
+      
+      await api.createProduct(productData);
 
       toast({
         title: "Success",
@@ -153,7 +165,7 @@ export default function AddProduct() {
       });
       navigate("/inventory");
     } catch (error) {
-      console.error("Error adding product:", error);
+      console.error("❌ Error adding product:", error);
       const message =
         error instanceof Error && error.message
           ? error.message
