@@ -132,12 +132,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "/api/products/search/:code",
     isAuthenticated,
     asyncHandler(async (req, res) => {
-      const { code } = req.params;
+      let { code } = req.params;
       const orgId = requireOrgId(req);
+
+      // Decode URL-encoded characters and trim whitespace (QR scanners may include newlines)
+      code = decodeURIComponent(code).trim();
+
+      console.log(
+        `🔎 Searching for product with code: "${code}" (len=${code.length}) in org: ${orgId}`
+      );
+
       const product = await productService.searchByCode(code, orgId);
+
       if (!product) {
+        console.log(`❌ No product found for code: "${code}"`);
         return res.status(404).json({ error: "Product not found", code });
       }
+
+      console.log(
+        `✅ Found product ${product.id} (${product.name}) for code: "${code}"`
+      );
       res.json(product);
     })
   );

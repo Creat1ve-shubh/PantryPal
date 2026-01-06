@@ -12,6 +12,9 @@ neonConfig.webSocketConstructor = ws;
 neonConfig.useSecureWebSocket = true;
 neonConfig.pipelineConnect = "password";
 
+// Silence Neon driver WebSocket errors (known issue with ErrorEvent in Node.js)
+neonConfig.wsProxy = undefined; // Disable proxy that can cause connection issues
+
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL is not set in environment variables");
 }
@@ -28,7 +31,13 @@ const pool = new Pool({
   // Allow ~200-300 concurrent org users by increasing pool size
   max: 20,
   idleTimeoutMillis: 30_000,
-  connectionTimeoutMillis: 2_000,
+  connectionTimeoutMillis: 5_000, // Increased timeout for stability
+});
+
+// Add global error handler for pool to prevent crashes
+pool.on("error", (err) => {
+  console.error("❌ Unexpected database pool error:", err.message);
+  // Don't crash the app on connection errors - pool will retry
 });
 
 // Create drizzle database instance with pool
@@ -36,14 +45,14 @@ export const db = drizzle(pool, {
   schema,
   logger: DB_LOGGING
     ? {
-      logQuery(query: string, params: unknown[]) {
-        const start = Date.now();
-        // Log after execution via middleware or manually track timing
-        if (query.length > 100) {
-          console.log(`🔍 Query: ${query.substring(0, 100)}...`);
-        }
-      },
-    }
+        logQuery(query: string, params: unknown[]) {
+          const start = Date.now();
+          // Log after execution via middleware or manually track timing
+          if (query.length > 100) {
+            console.log(`🔍 Query: ${query.substring(0, 100)}...`);
+          }
+        },
+      }
     : undefined,
 });
 

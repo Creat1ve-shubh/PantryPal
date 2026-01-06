@@ -53,6 +53,12 @@ export class ProductRepository implements IRepository<Product> {
     type: "barcode" | "qr" = "barcode"
   ): Promise<Product | null> {
     const field = type === "barcode" ? products.barcode : products.qr_code;
+    const fieldName = type === "barcode" ? "barcode" : "qr_code";
+
+    console.log(
+      `    📋 Query: SELECT WHERE ${fieldName} = "${code}" AND org_id = ${orgId}`
+    );
+
     const result = await db
       .select()
       .from(products)
@@ -64,6 +70,16 @@ export class ProductRepository implements IRepository<Product> {
         )
       )
       .limit(1);
+
+    console.log(`    📊 Query result: ${result.length} rows`);
+    if (result[0]) {
+      console.log(
+        `    📌 Found: id=${result[0].id}, ${fieldName}=${
+          result[0][fieldName as keyof (typeof result)[0]]
+        }`
+      );
+    }
+
     return result[0] || null;
   }
 

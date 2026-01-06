@@ -5,10 +5,7 @@ export class ProductService {
   /**
    * Create a new product
    */
-  async createProduct(
-    data: InsertProduct,
-    orgId: string
-  ): Promise<Product> {
+  async createProduct(data: InsertProduct, orgId: string): Promise<Product> {
     // Validate barcode uniqueness within org (optional)
     if (data.barcode) {
       const existing = await productRepository.findByCode(
@@ -55,19 +52,14 @@ export class ProductService {
     }
 
     // Validate barcode uniqueness if changing
-    if (
-      data.barcode &&
-      data.barcode !== product.barcode
-    ) {
+    if (data.barcode && data.barcode !== product.barcode) {
       const existing = await productRepository.findByCode(
         data.barcode,
         orgId,
         "barcode"
       );
       if (existing) {
-        throw new Error(
-          `Product with barcode ${data.barcode} already exists`
-        );
+        throw new Error(`Product with barcode ${data.barcode} already exists`);
       }
     }
 
@@ -79,9 +71,7 @@ export class ProductService {
         "qr"
       );
       if (existing) {
-        throw new Error(
-          `Product with QR code ${data.qr_code} already exists`
-        );
+        throw new Error(`Product with QR code ${data.qr_code} already exists`);
       }
     }
 
@@ -97,18 +87,46 @@ export class ProductService {
 
   /**
    * Search product by barcode or QR code
+   * Handles both:
+   * - Plain UUID: "30cd1ba6-f1c8-41ea-a3be-ff037a5c3619"
+   * - JSON-encoded: {"id":"PROD-xxx",...}
    */
-  async searchByCode(
-    code: string,
-    orgId: string
-  ): Promise<Product | null> {
+  async searchByCode(code: string, orgId: string): Promise<Product | null> {
+    let searchCode = code.trim();
+
+    // If code is a JSON object (from barcode scanner), extract the ID
+    if (searchCode.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(searchCode);
+        searchCode = parsed.id || parsed.qr_code || code;
+        console.log(`  🔄 Extracted ID from JSON: "${searchCode}"`);
+      } catch (e) {
+        console.log(`  ⚠️ Failed to parse JSON, using as-is`);
+      }
+    }
+
     // Try barcode first
-    let product = await productRepository.findByCode(code, orgId, "barcode");
-    if (product) return product;
+    console.log(`  📦 Checking barcode field for: "${searchCode}"`);
+    let product = await productRepository.findByCode(
+      searchCode,
+      orgId,
+      "barcode"
+    );
+    if (product) {
+      console.log(`    ✅ Found by barcode: ${product.id}`);
+      return product;
+    }
 
     // Try QR code
-    product = await productRepository.findByCode(code, orgId, "qr");
-    return product;
+    console.log(`  📱 Checking qr_code field for: "${searchCode}"`);
+    product = await productRepository.findByCode(searchCode, orgId, "qr");
+    if (product) {
+      console.log(`    ✅ Found by qr_code: ${product.id}`);
+      return product;
+    }
+
+    console.log(`    ❌ Not found in barcode or qr_code fields`);
+    return null;
   }
 
   /**

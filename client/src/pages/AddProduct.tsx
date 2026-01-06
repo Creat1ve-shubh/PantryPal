@@ -70,22 +70,16 @@ export default function AddProduct() {
   };
 
   const generateQRCode = () => {
+    // Generate a temporary product ID (will be replaced by server-generated UUID)
     const productId = `PROD-${Date.now()}-${Math.random()
       .toString(36)
       .substr(2, 9)}`;
-    const qrData = JSON.stringify({
-      id: productId,
-      name: formData.name,
-      category: formData.category,
-      brand: formData.brand,
-      mrp: parseFloat(formData.mrp) || 0,
-      buying_cost: parseFloat(formData.buying_cost) || 0,
-      manufacturing_date: formData.manufacturing_date,
-      expiry_date: formData.expiry_date,
-      unit: formData.unit,
-      timestamp: new Date().toISOString(),
-      type: "pantry_pal_product",
-    });
+
+    // Store just the product ID in the QR code (not the full object)
+    // This ensures consistency with Inventory page generation
+    // The barcode scanner will read this and we'll extract it for product lookup
+    const qrData = productId;
+
     setGeneratedQR(qrData);
     setFormData((prev) => ({ ...prev, barcode: productId }));
   };

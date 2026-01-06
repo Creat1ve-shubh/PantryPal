@@ -50,6 +50,7 @@ import {
 
 export default function Inventory() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -62,7 +63,10 @@ export default function Inventory() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [batchGenerating, setBatchGenerating] = useState(false);
-  const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0 });
+  const [generationProgress, setGenerationProgress] = useState({
+    current: 0,
+    total: 0,
+  });
 
   // Load products directly from API with abort controller
   const loadProducts = useCallback(
@@ -120,18 +124,24 @@ export default function Inventory() {
 
   // Memoize filtered and sorted products for performance
   const filteredProducts = useMemo(() => {
-    let filtered = products.filter(
-      (product: Product) =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (product.brand &&
-          product.brand.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const search = searchTerm.toLowerCase();
+
+    let filtered = products.filter((product: Product) => {
+      const name = (product.name || "").toLowerCase();
+      const category = (product.category || "").toLowerCase();
+      const brand = (product.brand || "").toLowerCase();
+
+      return (
+        name.includes(search) ||
+        category.includes(search) ||
+        (!!brand && brand.includes(search))
+      );
+    });
 
     // Apply category filter
     if (categoryFilter !== "all") {
       filtered = filtered.filter(
-        (product: Product) => product.category === categoryFilter
+        (product: Product) => (product.category || "") === categoryFilter
       );
     }
 
@@ -208,9 +218,7 @@ export default function Inventory() {
             );
             return generateQRCode(productId, retryCount + 1);
           }
-          throw new Error(
-            `Failed to generate QR code: ${response.statusText}`
-          );
+          throw new Error(`Failed to generate QR code: ${response.statusText}`);
         }
 
         const data = await response.json();
@@ -219,7 +227,11 @@ export default function Inventory() {
         setProducts((prev) =>
           prev.map((p) =>
             p.id === productId
-              ? { ...p, qr_code: data.qr_code, qr_code_image: data.qr_code_image }
+              ? {
+                  ...p,
+                  qr_code: data.qr_code,
+                  qr_code_image: data.qr_code_image,
+                }
               : p
           )
         );
@@ -240,14 +252,18 @@ export default function Inventory() {
 
         toast({
           title: "QR Code Generated",
-          description: `QR code generated for ${data.product?.name || "product"}`,
+          description: `QR code generated for ${
+            data.product?.name || "product"
+          }`,
         });
       } catch (error) {
         console.error(`Error generating QR code for ${productId}:`, error);
         toast({
           title: "Error",
           description:
-            error instanceof Error ? error.message : "Failed to generate QR code",
+            error instanceof Error
+              ? error.message
+              : "Failed to generate QR code",
           variant: "destructive",
         });
       } finally {
@@ -410,14 +426,17 @@ export default function Inventory() {
     setGenerationProgress({ current: 0, total: 0 });
   }, [filteredProducts, generateQRCode, generateBarcode, toast]);
 
-  const viewQRCode = useCallback((product: Product) => {
-    if (product.qr_code_image) {
-      setSelectedProduct(product);
-      setQrDialogOpen(true);
-    } else {
-      void generateQRCode(product.id);
-    }
-  }, [generateQRCode]);
+  const viewQRCode = useCallback(
+    (product: Product) => {
+      if (product.qr_code_image) {
+        setSelectedProduct(product);
+        setQrDialogOpen(true);
+      } else {
+        void generateQRCode(product.id);
+      }
+    },
+    [generateQRCode]
+  );
 
   const handleDeleteClick = (product: Product) => {
     setProductToDelete(product);
@@ -453,14 +472,19 @@ export default function Inventory() {
     }
   }, [productToDelete, loadProducts, toast]);
 
+  const categories = useMemo(() => {
+    const uniqueCategories = new Set(
+      products.map((p: Product) => p.category).filter(Boolean)
+    );
+    return Array.from(uniqueCategories).sort();
+  }, [products]);
+
   const codeMissingCounts = useMemo(
     () => ({
-      missingQR: filteredProducts.filter(
-        (p: Product) => !p.qr_code_image
-      ).length,
-      missingBarcode: filteredProducts.filter(
-        (p: Product) => !p.barcode
-      ).length,
+      missingQR: filteredProducts.filter((p: Product) => !p.qr_code_image)
+        .length,
+      missingBarcode: filteredProducts.filter((p: Product) => !p.barcode)
+        .length,
     }),
     [filteredProducts]
   );
