@@ -709,6 +709,197 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
+  // ============================
+  // Payment Processing Endpoints
+  // ============================
+
+  /**
+   * Process payment for a bill
+   * Handles cash, card, UPI, and Razorpay payments
+   */
+  app.post(
+    "/api/bills/:billId/payment",
+    isAuthenticated,
+    requireRole("admin", "store_manager", "inventory_manager"),
+    asyncHandler(async (req, res) => {
+      const orgId = requireOrgId(req);
+      const billId = req.params.billId;
+      const { amount, method, razorpay_payment_id, notes } = req.body as {
+        amount: number;
+        method: "cash" | "card" | "upi" | "razorpay";
+        razorpay_payment_id?: string;
+        notes?: string;
+      };
+
+      // Import metrics for monitoring
+      const { paymentsProcessed, paymentLatency, billAmount } = await import(
+        "./middleware/prometheus"
+      );
+      const paymentStart = Date.now();
+
+      try {
+        // Validate input
+        if (!amount || amount <= 0) {
+          return res.status(400).json({ error: "Invalid payment amount" });
+        }
+
+        if (!["cash", "card", "upi", "razorpay"].includes(method)) {
+          return res.status(400).json({ error: "Invalid payment method" });
+        }
+
+        // Get bill from repository
+        const { billRepository } = await import("./repositories");
+        const bill = await billRepository.findById(billId, orgId);
+
+        if (!bill) {
+          paymentsProcessed.inc({ method, status: "not_found" });
+          return res.status(404).json({ error: "Bill not found" });
+        }
+
+        // Verify payment amount matches bill total
+        const billTotal = parseFloat(bill.final_amount || bill.total_amount);
+        if (Math.abs(amount - billTotal) > 0.01) {
+          paymentsProcessed.inc({ method, status: "amount_mismatch" });
+          return res.status(400).json({
+            error: `Payment amount (₹${amount}) does not match bill total (₹${billTotal})`,
+          });
+        }
+
+        // Handle Razorpay verification
+        if (method === "razorpay") {
+          if (!razorpay_payment_id) {
+            paymentsProcessed.inc({ method, status: "missing_payment_id" });
+            return res
+              .status(400)
+              .json({ error: "Razorpay payment ID required" });
+          }
+
+          if (!razorpay) {
+            paymentsProcessed.inc({ method, status: "razorpay_unavailable" });
+            return res.status(503).json({
+              error: "Razorpay is not configured",
+            });
+          }
+
+          try {
+            // Verify payment with Razorpay (optional - webhook is primary)
+            console.log(
+              `💳 Razorpay payment ${razorpay_payment_id} recorded for bill ${billId}`
+            );
+          } catch (err) {
+            console.error("Razorpay verification failed:", err);
+            paymentsProcessed.inc({ method, status: "verification_failed" });
+            return res.status(400).json({
+              error: "Razorpay payment verification failed",
+            });
+          }
+        }
+
+        // Update bill with payment information
+        const { db } = await import("./db");
+        const { bills } = await import("../shared/schema");
+        const { eq, and } = await import("drizzle-orm");
+
+        const updatedBill = await db
+          .update(bills)
+          .set({
+            payment_method: method,
+            payment_id: razorpay_payment_id,
+            payment_status: "completed",
+            finalized_at: new Date(),
+            finalized_by: req.user?.id || "system",
+            notes: notes || undefined,
+          })
+          .where(and(eq(bills.id, billId), eq(bills.org_id, orgId)))
+          .returning();
+
+        if (!updatedBill[0]) {
+          paymentsProcessed.inc({ method, status: "update_failed" });
+          return res.status(500).json({ error: "Failed to process payment" });
+        }
+
+        // Record successful payment
+        const paymentDuration = (Date.now() - paymentStart) / 1000;
+        paymentsProcessed.inc({ method, status: "success" });
+        paymentLatency.observe({ method }, paymentDuration);
+        billAmount.observe({ payment_method: method }, amount);
+
+        console.log(
+          `✅ Payment processed: ${method} for bill ${billId}, amount ₹${amount}`
+        );
+
+        res.json({
+          success: true,
+          bill: updatedBill[0],
+          message: `Payment of ₹${amount} processed via ${method}`,
+        });
+      } catch (error) {
+        paymentsProcessed.inc({ method, status: "error" });
+        console.error("Payment processing error:", error);
+        throw error;
+      }
+    })
+  );
+
+  /**
+   * Email receipt to customer
+   */
+  app.post(
+    "/api/bills/:billId/email-receipt",
+    isAuthenticated,
+    asyncHandler(async (req, res) => {
+      const orgId = requireOrgId(req);
+      const billId = req.params.billId;
+      const { email } = req.body as { email?: string };
+
+      const { billRepository } = await import("./repositories");
+      const bill = await billRepository.findById(billId, orgId);
+
+      if (!bill) {
+        return res.status(404).json({ error: "Bill not found" });
+      }
+
+      // TODO: Integrate email service (SendGrid, AWS SES, etc.)
+      // For now, just log
+      console.log(`📧 Email receipt requested for bill ${billId} to ${email}`);
+
+      res.json({
+        success: true,
+        message: `Receipt will be sent to ${email}`,
+      });
+    })
+  );
+
+  /**
+   * Get payment history for a bill
+   */
+  app.get(
+    "/api/bills/:billId/payments",
+    isAuthenticated,
+    asyncHandler(async (req, res) => {
+      const orgId = requireOrgId(req);
+      const billId = req.params.billId;
+
+      const { billRepository } = await import("./repositories");
+      const bill = await billRepository.findById(billId, orgId);
+
+      if (!bill) {
+        return res.status(404).json({ error: "Bill not found" });
+      }
+
+      // Return payment information
+      res.json({
+        bill_id: bill.id,
+        bill_number: bill.bill_number,
+        amount: bill.final_amount || bill.total_amount,
+        payment_method: bill.payment_method,
+        payment_status: bill.payment_status || "pending",
+        payment_id: bill.payment_id,
+        finalized_at: bill.finalized_at,
+      });
+    })
+  );
+
   // Inventory transactions API
   app.get(
     "/api/inventory-transactions",

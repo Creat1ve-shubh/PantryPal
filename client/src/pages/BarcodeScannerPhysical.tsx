@@ -27,10 +27,12 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useCartStore } from "@/stores/cartStore";
+import { useNavigate } from "react-router-dom";
 
 /**
  * Barcode Scanner for Physical Scanner Devices
- * 
+ *
  * Performance POS Mode:
  * - Auto-detection for USB/Bluetooth HID Scanners
  * - Keyboard Wedge fallback with 2ms character tracking
@@ -49,6 +51,8 @@ export default function BarcodeScanner() {
   }>({ connected: false, type: "wedge" });
 
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const cartStore = useCartStore();
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Setup Hardware Detection
@@ -133,7 +137,8 @@ export default function BarcodeScanner() {
     } catch (err) {
       toast({
         title: "Connection Failed",
-        description: "Please ensure the scanner is plugged in and you allow access.",
+        description:
+          "Please ensure the scanner is plugged in and you allow access.",
         variant: "destructive",
       });
     }
@@ -173,10 +178,22 @@ export default function BarcodeScanner() {
 
   const handleAddToCart = () => {
     if (!product) return;
+
+    // Add product to cart store
+    cartStore.addItem(product, stockQuantity);
+
+    // Show confirmation
+    const itemCount = cartStore.getItemCount();
     toast({
-      title: "Added to Cart",
-      description: `${stockQuantity}x ${product.name}`,
+      title: "✓ Added to Cart",
+      description: `${stockQuantity}x ${product.name} • Total items: ${itemCount}`,
+      action: {
+        label: "View Cart",
+        onClick: () => navigate("/checkout"),
+      },
     });
+
+    // Reset for next scan
     setProduct(null);
     setStockQuantity(1);
     inputRef.current?.focus();
@@ -187,27 +204,48 @@ export default function BarcodeScanner() {
       {/* Header with Connection Status */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">POS Barcode Scanner</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            POS Barcode Scanner
+          </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             Professional high-speed scanning for 1D/2D barcodes.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <Card className={`px-4 py-2 flex items-center gap-3 border-2 transition-all ${connectionStatus.connected ? "border-green-500 bg-green-50 dark:bg-green-950/20 shadow-sm shadow-green-200" : "border-amber-500 bg-amber-50 dark:bg-amber-950/20 shadow-sm shadow-amber-200"}`}>
+          <Card
+            className={`px-4 py-2 flex items-center gap-3 border-2 transition-all ${
+              connectionStatus.connected
+                ? "border-green-500 bg-green-50 dark:bg-green-950/20 shadow-sm shadow-green-200"
+                : "border-amber-500 bg-amber-50 dark:bg-amber-950/20 shadow-sm shadow-amber-200"
+            }`}
+          >
             {connectionStatus.connected ? (
-              connectionStatus.type === "usb" ? <Usb className="h-5 w-5 text-green-600 animate-pulse" /> : <Wifi className="h-5 w-5 text-green-600 animate-pulse" />
+              connectionStatus.type === "usb" ? (
+                <Usb className="h-5 w-5 text-green-600 animate-pulse" />
+              ) : (
+                <Wifi className="h-5 w-5 text-green-600 animate-pulse" />
+              )
             ) : (
               <Keyboard className="h-5 w-5 text-amber-600" />
             )}
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">POS Hardware</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                POS Hardware
+              </p>
               <p className="font-bold text-sm">
-                {connectionStatus.connected ? connectionStatus.name : "Keyboard Wedge"}
+                {connectionStatus.connected
+                  ? connectionStatus.name
+                  : "Keyboard Wedge"}
               </p>
             </div>
             {!connectionStatus.connected && (
-              <Button size="sm" variant="outline" className="ml-2 h-8 text-xs bg-white dark:bg-black" onClick={pairHardware}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="ml-2 h-8 text-xs bg-white dark:bg-black"
+                onClick={pairHardware}
+              >
                 Connnect Device
               </Button>
             )}
@@ -219,9 +257,11 @@ export default function BarcodeScanner() {
       <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
         <Barcode className="h-4 w-4 text-blue-600" />
         <AlertDescription className="text-blue-800 dark:text-blue-200">
-          <strong>Production Mode:</strong> Scanner will auto-detect and focus. Point your device at any 1D/2D code.
+          <strong>Production Mode:</strong> Scanner will auto-detect and focus.
+          Point your device at any 1D/2D code.
           <br />
-          <strong>Support:</strong> EAN-13, UPC-A, Code-128, QR, DataMatrix supported.
+          <strong>Support:</strong> EAN-13, UPC-A, Code-128, QR, DataMatrix
+          supported.
         </AlertDescription>
       </Alert>
 
@@ -292,22 +332,34 @@ export default function BarcodeScanner() {
             {/* Product Info Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg">
-                <p className="text-xs text-gray-500 mb-1 uppercase tracking-tight">MRP</p>
+                <p className="text-xs text-gray-500 mb-1 uppercase tracking-tight">
+                  MRP
+                </p>
                 <p className="text-xl font-bold">₹{product.mrp}</p>
               </div>
               <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg">
-                <p className="text-xs text-gray-500 mb-1 uppercase tracking-tight">Buying</p>
+                <p className="text-xs text-gray-500 mb-1 uppercase tracking-tight">
+                  Buying
+                </p>
                 <p className="text-xl font-bold">₹{product.buying_cost}</p>
               </div>
               <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg">
-                <p className="text-xs text-gray-500 mb-1 uppercase tracking-tight">Available</p>
+                <p className="text-xs text-gray-500 mb-1 uppercase tracking-tight">
+                  Available
+                </p>
                 <p className="text-xl font-bold text-primary">
                   {product.quantity_in_stock || 0} {product.unit || "pcs"}
                 </p>
               </div>
               <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg">
-                <p className="text-xs text-gray-500 mb-1 uppercase tracking-tight">Status</p>
-                <Badge className={`${getStockStatus(product).className} hover:${getStockStatus(product).className}`}>
+                <p className="text-xs text-gray-500 mb-1 uppercase tracking-tight">
+                  Status
+                </p>
+                <Badge
+                  className={`${getStockStatus(product).className} hover:${
+                    getStockStatus(product).className
+                  }`}
+                >
                   {getStockStatus(product).label}
                 </Badge>
               </div>

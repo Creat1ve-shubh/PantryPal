@@ -65,24 +65,24 @@ app.use(
     contentSecurityPolicy: isDev
       ? false
       : {
-        directives: {
-          defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "https://checkout.razorpay.com"],
-          scriptSrcElem: ["'self'", "https://checkout.razorpay.com"],
-          frameSrc: [
-            "'self'",
-            "https://api.razorpay.com",
-            "https://checkout.razorpay.com",
-          ],
-          connectSrc: [
-            "'self'",
-            "https://lumberjack.razorpay.com",
-            "https://api.razorpay.com",
-            "https://checkout.razorpay.com",
-          ],
-          // Add other directives as needed
+          directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "https://checkout.razorpay.com"],
+            scriptSrcElem: ["'self'", "https://checkout.razorpay.com"],
+            frameSrc: [
+              "'self'",
+              "https://api.razorpay.com",
+              "https://checkout.razorpay.com",
+            ],
+            connectSrc: [
+              "'self'",
+              "https://lumberjack.razorpay.com",
+              "https://api.razorpay.com",
+              "https://checkout.razorpay.com",
+            ],
+            // Add other directives as needed
+          },
         },
-      },
     crossOriginEmbedderPolicy: isDev ? false : undefined,
   })
 );
@@ -117,6 +117,13 @@ const scheduleSessionCleanup = () => {
 
 // Setup authentication (must be before routes)
 setupAuth(app);
+
+// Add Prometheus metrics middleware (before routes to capture all requests)
+import { metricsMiddleware, metricsHandler } from "./middleware/prometheus";
+app.use(metricsMiddleware);
+
+// Expose metrics endpoint for Prometheus scraping
+app.get("/metrics", metricsHandler);
 
 // Simple request logger
 app.use((req, res, next) => {
@@ -161,25 +168,28 @@ app.use((req, res, next) => {
 
   // Skip server startup during tests to avoid port conflicts
   // Tests import this file but should not start the HTTP server
-  const isTestEnvironment = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test';
+  const isTestEnvironment =
+    process.env.VITEST === "true" || process.env.NODE_ENV === "test";
 
   if (!isTestEnvironment) {
     const PORT = parseInt(process.env.PORT || "5000", 10);
     const HOST = process.env.HOST || "127.0.0.1";
 
-    server.listen(PORT, HOST, () => {
-      log(`🚀 Server running on http://${HOST}:${PORT}`);
-    }).on('error', (err: NodeJS.ErrnoException) => {
-      if (err.code === 'EADDRINUSE') {
-        log(`❌ Port ${PORT} already in use, trying alternate port`);
-        server.listen(0, HOST, () => {
-          const addr = server.address();
-          const port = typeof addr === 'object' && addr ? addr.port : PORT;
-          log(`🚀 Server running on http://${HOST}:${port}`);
-        });
-      } else {
-        throw err;
-      }
-    });
+    server
+      .listen(PORT, HOST, () => {
+        log(`🚀 Server running on http://${HOST}:${PORT}`);
+      })
+      .on("error", (err: NodeJS.ErrnoException) => {
+        if (err.code === "EADDRINUSE") {
+          log(`❌ Port ${PORT} already in use, trying alternate port`);
+          server.listen(0, HOST, () => {
+            const addr = server.address();
+            const port = typeof addr === "object" && addr ? addr.port : PORT;
+            log(`🚀 Server running on http://${HOST}:${port}`);
+          });
+        } else {
+          throw err;
+        }
+      });
   }
 })();

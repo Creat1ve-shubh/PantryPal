@@ -24,6 +24,8 @@ import NotFound from "./pages/NotFound";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import BarcodeScannerPhysical from "./pages/BarcodeScannerPhysical";
 import Subscription from "./pages/Subscription";
+import Checkout from "./pages/Checkout";
+import OrderConfirmation from "./pages/OrderConfirmation";
 
 const queryClient = new QueryClient();
 
@@ -119,6 +121,33 @@ const App = () => (
                 <ProtectedRoute>
                   <DashboardLayout>
                     <BarcodeScannerPhysical />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Checkout Flow - Accessible to staff who can create bills */}
+            <Route
+              path="/checkout"
+              element={
+                <ProtectedRoute
+                  roles={["admin", "store_manager", "inventory_manager"]}
+                >
+                  <DashboardLayout>
+                    <Checkout />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/order-confirmation/:billId"
+              element={
+                <ProtectedRoute
+                  roles={["admin", "store_manager", "inventory_manager"]}
+                >
+                  <DashboardLayout>
+                    <OrderConfirmation />
                   </DashboardLayout>
                 </ProtectedRoute>
               }

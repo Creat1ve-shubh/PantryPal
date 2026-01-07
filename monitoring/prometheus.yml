@@ -1,0 +1,48 @@
+# Prometheus Configuration for PantryPal
+# Scrapes metrics from the application every 15 seconds
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: 'production'
+    app: 'pantrypal'
+
+# Alertmanager configuration (optional)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+# rule_files:
+#   - "alerts.yml"
+
+scrape_configs:
+  # PantryPal Application Metrics
+  - job_name: 'pantrypal-app'
+    static_configs:
+      - targets: ['host.docker.internal:5000']  # Adjust port if needed
+        labels:
+          service: 'pantrypal-api'
+          instance: 'main'
+
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node Exporter (system metrics)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'system-metrics'
+
+  # Cadvisor (container metrics)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'container-metrics'
