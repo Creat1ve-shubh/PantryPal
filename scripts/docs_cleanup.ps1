@@ -19,7 +19,8 @@ function Move-RootDocsToDocsFolder {
         $target = Join-Path $docsFolder $doc.Name
         if ($DryRun) {
             Write-Host "[DryRun] Would move: $($doc.FullName) -> $target" -ForegroundColor Yellow
-        } else {
+        }
+        else {
             Write-Host "Moving: $($doc.Name) -> docs/" -ForegroundColor Green
             Move-Item -Force -Path $doc.FullName -Destination $target
         }
@@ -36,10 +37,10 @@ function RewriteLinks {
         $content = Get-Content -Path $readmePath -Raw
         # Replace links that point to root docs with docs/ versions
         $patterns = @(
-            'ARCHITECTURE_IMPLEMENTATION.md','ARCHITECTURE.md','BARCODE_QR_FIX.md','CHECKOUT_IMPLEMENTATION_COMPLETE.md',
-            'CI_CD_PIPELINE_UPDATES.md','CODE_CHANGES_DETAILED.md','context.md','CONTRIBUTING.md','ENV_USAGE.md',
-            'FRONTEND_IMPLEMENTATION.md','IMPLEMENTATION_STATUS.md','IMPLEMENTATION_VERIFICATION.md','QR_BARCODE_TESTING_GUIDE.md',
-            'QR_DATA_FLOW_FIX.md','QUICK_REFERENCE.md','SETUP.md','SOLUTION_COMPLETE.md','INVITE_PRODUCTION_ASSESSMENT.md','INVITE_GO_NODOGO.md'
+            'ARCHITECTURE_IMPLEMENTATION.md', 'ARCHITECTURE.md', 'BARCODE_QR_FIX.md', 'CHECKOUT_IMPLEMENTATION_COMPLETE.md',
+            'CI_CD_PIPELINE_UPDATES.md', 'CODE_CHANGES_DETAILED.md', 'context.md', 'CONTRIBUTING.md', 'ENV_USAGE.md',
+            'FRONTEND_IMPLEMENTATION.md', 'IMPLEMENTATION_STATUS.md', 'IMPLEMENTATION_VERIFICATION.md', 'QR_BARCODE_TESTING_GUIDE.md',
+            'QR_DATA_FLOW_FIX.md', 'QUICK_REFERENCE.md', 'SETUP.md', 'SOLUTION_COMPLETE.md', 'INVITE_PRODUCTION_ASSESSMENT.md', 'INVITE_GO_NODOGO.md'
         )
         foreach ($p in $patterns) {
             # Replace (./p) -> (./docs/p)
@@ -47,7 +48,8 @@ function RewriteLinks {
         }
         if ($DryRun) {
             Write-Host "[DryRun] README.md link rewrite simulated" -ForegroundColor Yellow
-        } else {
+        }
+        else {
             Set-Content -Path $readmePath -Value $content -NoNewline
         }
     }
@@ -62,7 +64,8 @@ function RewriteLinks {
             if ($newContent -ne $content) {
                 if ($DryRun) {
                     Write-Host "[DryRun] Would rewrite relative links in: $path" -ForegroundColor Yellow
-                } else {
+                }
+                else {
                     Write-Host "Rewriting relative links in: $path" -ForegroundColor Green
                     Set-Content -Path $path -Value $newContent -NoNewline
                 }

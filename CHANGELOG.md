@@ -5,105 +5,122 @@ A curated narrative of the major milestones, design decisions, and reasoning beh
 ## Detailed Decisions & Technical Changes
 
 ### Architecture & Stack
+
 - Decision: Use React + Vite + TypeScript for the client; Express + Drizzle ORM + PostgreSQL (Neon) for the server.
-	- Change: Adopted Vite for faster dev/build times; Drizzle for typed SQL with migration control.
-	- Reasoning: Developer productivity, strong typing across the stack, simple and maintainable migrations.
-	- Impact: Reduced build times, safer schema evolution, clearer service boundaries.
+
+  - Change: Adopted Vite for faster dev/build times; Drizzle for typed SQL with migration control.
+  - Reasoning: Developer productivity, strong typing across the stack, simple and maintainable migrations.
+  - Impact: Reduced build times, safer schema evolution, clearer service boundaries.
 
 - Decision: Enforce clean layering (controllers → services → repositories) and shared schemas/types.
-	- Change: Centralized validation in `shared/schema.ts`; moved business rules into services.
-	- Reasoning: Testability, separation of concerns, easier refactors.
-	- Impact: Lower coupling, higher unit test coverage, consistent validation.
+  - Change: Centralized validation in `shared/schema.ts`; moved business rules into services.
+  - Reasoning: Testability, separation of concerns, easier refactors.
+  - Impact: Lower coupling, higher unit test coverage, consistent validation.
 
 ### Authentication & Sessions
+
 - Decision: Dual auth model (JWT for APIs, cookie session for admin UI).
-	- Change: Added `routes.jwt.ts` with RBAC middleware; kept `/api/*` session routes for dashboard.
-	- Reasoning: JWT suits API access and mobile; sessions simplify admin UX and CSRF handling.
-	- Impact: Flexible auth paths, improved security posture, cleaner permission checks.
+
+  - Change: Added `routes.jwt.ts` with RBAC middleware; kept `/api/*` session routes for dashboard.
+  - Reasoning: JWT suits API access and mobile; sessions simplify admin UX and CSRF handling.
+  - Impact: Flexible auth paths, improved security posture, cleaner permission checks.
 
 - Decision: Strict security defaults (HTTPS, secure cookies, SameSite=strict, strong secrets).
-	- Change: Standardized `.env.production` with explicit expiry windows and rate limits.
-	- Reasoning: Defense in depth against token theft and session fixation.
-	- Impact: Fewer attack surfaces, consistent runtime behavior in production.
+  - Change: Standardized `.env.production` with explicit expiry windows and rate limits.
+  - Reasoning: Defense in depth against token theft and session fixation.
+  - Impact: Fewer attack surfaces, consistent runtime behavior in production.
 
 ### Roles, RBAC & Multi-Tenant
+
 - Decision: Define 4 core roles (Admin, Store Manager, Inventory Manager, Cashier) with granular permissions.
-	- Change: Implemented `can()` permission checks and `loadPermissions()` middleware.
-	- Reasoning: Principle of least privilege; predictable access rules.
-	- Impact: Safer operations in multi-user orgs; clear onboarding flows.
+
+  - Change: Implemented `can()` permission checks and `loadPermissions()` middleware.
+  - Reasoning: Principle of least privilege; predictable access rules.
+  - Impact: Safer operations in multi-user orgs; clear onboarding flows.
 
 - Decision: Hard enforce tenant boundaries on every query.
-	- Change: Added `org_id` scoping and composite indexes on invite tables.
-	- Reasoning: Prevent cross-tenant data exposure.
-	- Impact: Verified isolation, improved query performance at scale.
+  - Change: Added `org_id` scoping and composite indexes on invite tables.
+  - Reasoning: Prevent cross-tenant data exposure.
+  - Impact: Verified isolation, improved query performance at scale.
 
 ### Invite System Evolution
+
 - Decision: Make phone optional; validate email strictly on the client.
-	- Change: Updated `inviteCreateSchema` to `phone?: string`; added email regex validation in UI.
-	- Reasoning: MSME-friendly onboarding; avoid friction for email-only invites.
-	- Impact: Higher invite completion rates; fewer user errors.
+
+  - Change: Updated `inviteCreateSchema` to `phone?: string`; added email regex validation in UI.
+  - Reasoning: MSME-friendly onboarding; avoid friction for email-only invites.
+  - Impact: Higher invite completion rates; fewer user errors.
 
 - Decision: Remove artificial delay and adopt fire-and-forget for email/SMS dispatch.
-	- Change: Controller returns immediately; background send with error logging.
-	- Reasoning: Perceived performance and responsive UX.
-	- Impact: ~300ms average response; users get instant feedback.
+
+  - Change: Controller returns immediately; background send with error logging.
+  - Reasoning: Perceived performance and responsive UX.
+  - Impact: ~300ms average response; users get instant feedback.
 
 - Decision: Add operational control via pending list + withdraw.
-	- Change: Implemented `GET /org/invites/pending` and `DELETE /org/invites/:id` with org scope checks.
-	- Reasoning: Allow admins to retract mistakes, reduce ghost invites.
-	- Impact: Cleaner onboarding state; auditable actions.
+
+  - Change: Implemented `GET /org/invites/pending` and `DELETE /org/invites/:id` with org scope checks.
+  - Reasoning: Allow admins to retract mistakes, reduce ghost invites.
+  - Impact: Cleaner onboarding state; auditable actions.
 
 - Decision: Build production readiness artifacts.
-	- Change: Authored detailed assessment and quick go/no-go doc; optimized indexes and connection pooling.
-	- Reasoning: Formalize risk, readiness, and monitoring; accelerate deployment approvals.
-	- Impact: Confident rollout; faster stakeholder buy-in.
+  - Change: Authored detailed assessment and quick go/no-go doc; optimized indexes and connection pooling.
+  - Reasoning: Formalize risk, readiness, and monitoring; accelerate deployment approvals.
+  - Impact: Confident rollout; faster stakeholder buy-in.
 
 ### QR/Barcode Reliability
+
 - Decision: Systematically fix QR/barcode scanning across browsers/devices.
-	- Change: Documented failure modes, refactored parsing/data flow, added test guides.
-	- Reasoning: Mission-critical for POS operations; reduce scanning errors.
-	- Impact: Lower support burden; consistent scan performance.
+  - Change: Documented failure modes, refactored parsing/data flow, added test guides.
+  - Reasoning: Mission-critical for POS operations; reduce scanning errors.
+  - Impact: Lower support burden; consistent scan performance.
 
 ### PWA & Offline-First
+
 - Decision: Full offline capability using service workers and IndexedDB.
-	- Change: Caching strategies, background sync patterns, testing checklists.
-	- Reasoning: Real-world unreliable networks; keep stores operating offline.
-	- Impact: Business continuity; improved user satisfaction.
+  - Change: Caching strategies, background sync patterns, testing checklists.
+  - Reasoning: Real-world unreliable networks; keep stores operating offline.
+  - Impact: Business continuity; improved user satisfaction.
 
 ### Billing & Immutability
+
 - Decision: Atomic bill finalization and immutable invoice records.
-	- Change: Transactional boundaries with rollback on failure; high-quality PDF output.
-	- Reasoning: Financial integrity and auditability.
-	- Impact: Trustworthy billing; professional outputs for customers.
+  - Change: Transactional boundaries with rollback on failure; high-quality PDF output.
+  - Reasoning: Financial integrity and auditability.
+  - Impact: Trustworthy billing; professional outputs for customers.
 
 ### Deployment & Ops
+
 - Decision: Docker + NGINX reverse proxy for production.
-	- Change: Containerized builds, health checks, hardened headers via Helmet.
-	- Reasoning: Consistent deploys, security headers, easy scaling.
-	- Impact: Predictable operations; reduced configuration drift.
+
+  - Change: Containerized builds, health checks, hardened headers via Helmet.
+  - Reasoning: Consistent deploys, security headers, easy scaling.
+  - Impact: Predictable operations; reduced configuration drift.
 
 - Decision: Use Neon serverless PostgreSQL with branching strategy.
-	- Change: Separate dev/prod branches; tuned pooling and added critical indexes.
-	- Reasoning: Cost-effective scale; safe schema evolution.
-	- Impact: Stable performance; simpler migrations.
+  - Change: Separate dev/prod branches; tuned pooling and added critical indexes.
+  - Reasoning: Cost-effective scale; safe schema evolution.
+  - Impact: Stable performance; simpler migrations.
 
 ### CI/CD & Environment Management
+
 - Decision: GitHub Actions for build/test/deploy pipeline.
-	- Change: Secrets management, deployment steps, status badges.
-	- Reasoning: Automation reduces human error; faster iteration.
-	- Impact: Reliable deployments; improved developer velocity.
+
+  - Change: Secrets management, deployment steps, status badges.
+  - Reasoning: Automation reduces human error; faster iteration.
+  - Impact: Reliable deployments; improved developer velocity.
 
 - Decision: Standardize environment variable naming and documentation.
-	- Change: Consolidated ENV docs; aligned flags for features and security.
-	- Reasoning: Reduce misconfiguration; easier onboarding.
-	- Impact: Fewer env-related incidents; faster setup.
+  - Change: Consolidated ENV docs; aligned flags for features and security.
+  - Reasoning: Reduce misconfiguration; easier onboarding.
+  - Impact: Fewer env-related incidents; faster setup.
 
 ### Scale & Testing
-- Decision: Introduce load testing and performance monitoring checkpoints.
-	- Change: k6 scenarios, scalability assessments, alerting recommendations.
-	- Reasoning: Validate behavior under stress and plan capacity.
-	- Impact: Predictable scale; early detection of bottlenecks.
 
+- Decision: Introduce load testing and performance monitoring checkpoints.
+  - Change: k6 scenarios, scalability assessments, alerting recommendations.
+  - Reasoning: Validate behavior under stress and plan capacity.
+  - Impact: Predictable scale; early detection of bottlenecks.
 
 ## Foundations
 
