@@ -16,29 +16,29 @@ import { listRoles } from "./controllers/rbacController";
 
 export function registerJwtRoutes(app: Express) {
   // Auth endpoints
-  app.post("/auth/signup", loginLimiter, signup);
-  app.post("/auth/login", loginLimiter, login);
-  app.post("/auth/refresh", refreshLimiter, refresh);
-  app.post("/auth/logout", auth(), logout);
+  app.post("/api/auth/signup", loginLimiter, signup);
+  app.post("/api/auth/login", loginLimiter, login);
+  app.post("/api/auth/refresh", refreshLimiter, refresh);
+  app.post("/api/auth/logout", auth(), logout);
 
   // Organization invite flow
   app.post(
-    "/org/invite",
+    "/api/org/invite",
     auth(),
     loadPermissions(),
     can("users:manage"),
     orgInvite
   );
-  app.post("/invite/accept", inviteAccept);
+  app.post("/api/invite/accept", inviteAccept);
   app.get(
-    "/org/invites/pending",
+    "/api/org/invites/pending",
     auth(),
     loadPermissions(),
     can("users:manage"),
     listPendingInvites
   );
   app.delete(
-    "/org/invites/:id",
+    "/api/org/invites/:id",
     auth(),
     loadPermissions(),
     can("users:manage"),
@@ -47,7 +47,7 @@ export function registerJwtRoutes(app: Express) {
 
   // RBAC helpers
   app.get(
-    "/rbac/roles",
+    "/api/rbac/roles",
     auth(),
     loadPermissions(),
     can("roles:assign"),
