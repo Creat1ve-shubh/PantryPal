@@ -8,6 +8,7 @@
 ## 📊 Executive Summary
 
 The invite system is **fit for production** with proper scaling for MSMEs (500-1000 concurrent users per org, 10K+ invites). It includes:
+
 - ✅ Robust error handling
 - ✅ Database optimizations with indexes
 - ✅ Multi-tenant data isolation
@@ -23,6 +24,7 @@ The invite system is **fit for production** with proper scaling for MSMEs (500-1
 ## ✅ STRENGTHS
 
 ### 1. **Performance**
+
 - **Fire-and-forget pattern** ✅
   - Email/SMS sent in background, don't block response
   - Instant feedback to user (~300ms validation + API response)
@@ -37,6 +39,7 @@ The invite system is **fit for production** with proper scaling for MSMEs (500-1
   - Handles multiple concurrent requests efficiently
 
 ### 2. **Reliability & Error Handling**
+
 - **Non-blocking email/SMS** ✅
   - Service not configured? Graceful degradation with warnings
   - Network failures caught and logged
@@ -51,6 +54,7 @@ The invite system is **fit for production** with proper scaling for MSMEs (500-1
   - Can be extended via `expires_in_hours` param
 
 ### 3. **Security**
+
 - **Multi-tenant isolation** ✅
   - All queries filter by `org_id`
   - Cross-org access explicitly denied
@@ -69,6 +73,7 @@ The invite system is **fit for production** with proper scaling for MSMEs (500-1
   - Timezone-aware timestamps
 
 ### 4. **Data Consistency**
+
 - **Plan-based limits enforced** ✅
   - Prevents over-inviting beyond plan limits
   - Counts both accepted users + pending invites
@@ -83,6 +88,7 @@ The invite system is **fit for production** with proper scaling for MSMEs (500-1
   - Unique constraints on users (email, username)
 
 ### 5. **UX/Frontend**
+
 - **Real-time status tracking** ✅
   - Validating → Sending → Success flow
   - Animated icons for visual feedback
@@ -97,6 +103,7 @@ The invite system is **fit for production** with proper scaling for MSMEs (500-1
   - Works in browsers, PWA, mobile apps
 
 ### 6. **Maintainability**
+
 - **Clear code structure** ✅
   - Separation: controllers, services, routes
   - Well-commented error handling
@@ -115,22 +122,27 @@ The invite system is **fit for production** with proper scaling for MSMEs (500-1
 ## ⚠️ POTENTIAL ISSUES & MITIGATION
 
 ### 1. **Email Service Dependency**
+
 **Issue**: If Gmail SMTP fails, invites sent without email delivery  
 **Current**: Non-blocking (good), but user doesn't know  
 **Mitigation** ✅:
+
 ```typescript
 // Add optional webhook to track delivery
 // Store email send status in user_invites.email_sent_at
 // Retry mechanism for failed sends
 ```
+
 **Action**: Not critical for MVP, can be added in Phase 2
 
 ### 2. **N+1 Query on List Pending Invites**
+
 **Current**: Single join query (optimized) ✅  
 **Performance**: O(n) - fine for < 1000 pending invites  
 **At scale (10K+ pending)**: May need pagination
 
 **Mitigation**:
+
 ```typescript
 // Add pagination
 const limit = 100;
@@ -138,25 +150,31 @@ const offset = (page - 1) * limit;
 .limit(limit).offset(offset)
 // or use keyset pagination for better performance
 ```
+
 **Recommendation**: Add pagination when pending > 1000
 
 ### 3. **Concurrent Withdraw + Accept**
+
 **Issue**: Race condition if user accepts while admin withdraws  
 **Current**: Last write wins  
 **Impact**: Very low risk (< 1% of invites)
 
 **Mitigation** (optional):
+
 ```typescript
 // Add optimistic locking
 ALTER TABLE user_invites ADD COLUMN version INT DEFAULT 0;
 // Increment on updates, fail if version mismatch
 ```
+
 **Recommendation**: Monitor first 3 months; add if issues occur
 
 ### 4. **Email Verification Not Required**
+
 **Issue**: Can invite any email address (even typos)  
 **Current**: User must click link to verify email  
 **Mitigation** ✅:
+
 - Email validation regex on form
 - User receives link and clicks to confirm
 - Failed delivery prevents account creation
@@ -169,23 +187,23 @@ ALTER TABLE user_invites ADD COLUMN version INT DEFAULT 0;
 
 ### Current Performance (per org)
 
-| Metric | Value | Status |
-|--------|-------|--------|
-| Concurrent users | 100-500 | ✅ Good |
-| Pending invites | 0-1000 | ✅ Optimized |
-| Total invites (lifetime) | 10K-100K | ✅ Good |
-| Email send latency | ~500-2000ms | ✅ Async |
-| API response time | ~200-400ms | ✅ Good |
-| Database queries | 2-4 per invite | ✅ Optimized |
+| Metric                   | Value          | Status       |
+| ------------------------ | -------------- | ------------ |
+| Concurrent users         | 100-500        | ✅ Good      |
+| Pending invites          | 0-1000         | ✅ Optimized |
+| Total invites (lifetime) | 10K-100K       | ✅ Good      |
+| Email send latency       | ~500-2000ms    | ✅ Async     |
+| API response time        | ~200-400ms     | ✅ Good      |
+| Database queries         | 2-4 per invite | ✅ Optimized |
 
 ### Bottleneck Analysis
 
-| Component | Limit | Action |
-|-----------|-------|--------|
-| Email service | 100 emails/min (Gmail) | ✅ Queue if needed |
-| Database connections | 20 (Neon) | ✅ Sufficient for MSME |
-| Memory (per request) | ~2-5MB | ✅ Minimal |
-| Storage (invites) | ~1KB per record | ✅ Infinite for MSME |
+| Component            | Limit                  | Action                 |
+| -------------------- | ---------------------- | ---------------------- |
+| Email service        | 100 emails/min (Gmail) | ✅ Queue if needed     |
+| Database connections | 20 (Neon)              | ✅ Sufficient for MSME |
+| Memory (per request) | ~2-5MB                 | ✅ Minimal             |
+| Storage (invites)    | ~1KB per record        | ✅ Infinite for MSME   |
 
 ### Scaling Path (future)
 
@@ -215,15 +233,15 @@ ALTER TABLE user_invites ADD COLUMN version INT DEFAULT 0;
 
 ## 🧪 Testing Status
 
-| Test Type | Status | Coverage |
-|-----------|--------|----------|
-| Unit tests | ✅ Run | 109 passed, 27 skipped |
-| Integration tests | ✅ Included | Auth flow end-to-end |
-| Email flow | ✅ Mocked | Service disabled gracefully |
-| Error handling | ✅ Covered | DB errors, network errors |
-| Concurrency | ✅ Tested | Email race condition handled |
-| XSS protection | ✅ Safe | HTML-encoded in email |
-| Authorization | ✅ Verified | Org scope enforced |
+| Test Type         | Status      | Coverage                     |
+| ----------------- | ----------- | ---------------------------- |
+| Unit tests        | ✅ Run      | 109 passed, 27 skipped       |
+| Integration tests | ✅ Included | Auth flow end-to-end         |
+| Email flow        | ✅ Mocked   | Service disabled gracefully  |
+| Error handling    | ✅ Covered  | DB errors, network errors    |
+| Concurrency       | ✅ Tested   | Email race condition handled |
+| XSS protection    | ✅ Safe     | HTML-encoded in email        |
+| Authorization     | ✅ Verified | Org scope enforced           |
 
 ---
 
@@ -286,21 +304,25 @@ Alerts:
 ## 💡 Future Improvements (Phase 2)
 
 1. **Email delivery tracking**
+
    - Add Mailgun/SendGrid (more reliable than SMTP)
    - Track opens, clicks
    - Automatic retry on failure
 
 2. **Bulk invites**
+
    - CSV upload for 100+ users
    - Progress tracking
    - Bulk actions (withdraw, resend)
 
 3. **Invite templates**
+
    - Custom email text per org
    - Branding (logo, colors)
    - Multiple languages
 
 4. **SMS integration**
+
    - Twilio configured but disabled
    - Enable when needed
    - Cost-effective for international users
@@ -317,6 +339,7 @@ Alerts:
 ✅ **The invite system is production-ready.**
 
 **Safe to deploy today because:**
+
 1. All code reviewed and tested
 2. Database properly indexed
 3. Error handling comprehensive
@@ -326,6 +349,7 @@ Alerts:
 7. Scales to 10K+ invites
 
 **Known limitations:**
+
 - Email optional (graceful degradation)
 - Manual pagination needed at 1000+ pending
 - Race conditions extremely rare

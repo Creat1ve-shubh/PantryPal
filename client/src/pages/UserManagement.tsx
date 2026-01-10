@@ -785,9 +785,12 @@ function InviteUserForm({
         ""
       );
       const endpoint = `${apiBase}/api/org/invites/pending?org_id=${org}`;
-      const res = await fetch(apiBase ? endpoint : `/api/org/invites/pending?org_id=${org}`, {
-        credentials: "include",
-      });
+      const res = await fetch(
+        apiBase ? endpoint : `/api/org/invites/pending?org_id=${org}`,
+        {
+          credentials: "include",
+        }
+      );
       const data = await res.json();
       if (res.ok && data.invites) {
         setPendingInvites(data.invites);
@@ -808,10 +811,13 @@ function InviteUserForm({
         ""
       );
       const endpoint = `${apiBase}/api/org/invites/${inviteId}`;
-      const res = await fetch(apiBase ? endpoint : `/api/org/invites/${inviteId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
+      const res = await fetch(
+        apiBase ? endpoint : `/api/org/invites/${inviteId}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
 
       if (res.ok) {
         await loadPendingInvites();
