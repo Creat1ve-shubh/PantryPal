@@ -27,7 +27,6 @@ function InviteInner() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [roleId, setRoleId] = useState<string>("");
   const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
   const [link, setLink] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -91,10 +90,16 @@ function InviteInner() {
     if (!orgId) return setError("Org ID is required");
     if (!roleId) return setError("Pick a role");
     if (!fullName.trim()) return setError("Full name required");
-    if (!phone.trim()) return setError("Phone number required");
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) return setError("Enter a valid email");
+    const apiBase = (import.meta.env.VITE_API_BASE_URL || "").replace(
+      /\/$/,
+      ""
+    );
+    const inviteEndpoint = `${apiBase}/org/invite`;
     setError(null);
     setSending(true);
-    const res = await fetch("/org/invite", {
+    const res = await fetch(apiBase ? inviteEndpoint : "/org/invite", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -105,7 +110,6 @@ function InviteInner() {
         email,
         role_id: Number(roleId),
         full_name: fullName,
-        phone,
       }),
     });
     const data = await res.json();
@@ -180,14 +184,6 @@ function InviteInner() {
                   <Input
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="text-sm">Phone Number</label>
-                  <Input
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
                     required
                   />
                 </div>

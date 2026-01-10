@@ -212,7 +212,7 @@ export async function createInvite(params: {
   store_id?: string;
   expires_in_hours?: number;
   full_name: string;
-  phone: string;
+  phone?: string;
 }) {
   const {
     org_id,
@@ -309,7 +309,7 @@ export async function createInvite(params: {
       token_hash,
       expires_at,
       full_name,
-      phone,
+      phone: phone || null,
     })
     .returning();
 
@@ -405,7 +405,7 @@ export async function acceptInvite(
         email: invite.email,
         password: hashed,
         full_name: full_name || (invite as any).full_name,
-        phone: (invite as any).phone as any,
+        phone: ((invite as any).phone as any) || null,
         role: "cashier",
       })
       .returning();

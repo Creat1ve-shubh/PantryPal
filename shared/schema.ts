@@ -469,7 +469,7 @@ export const inviteCreateSchema = z.object({
   store_id: z.string().uuid().optional(),
   expires_in_hours: z.number().int().min(1).max(168).default(48),
   full_name: z.string().min(2),
-  phone: z.string().min(6),
+  phone: z.string().min(6).optional(),
 });
 
 export const inviteAcceptSchema = z.object({

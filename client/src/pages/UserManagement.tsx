@@ -656,7 +656,6 @@ function InviteUserForm({
   const [adminPassword, setAdminPassword] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
   const [roleId, setRoleId] = useState<string>("");
   const [org, setOrg] = useState<string>("");
   const [roles, setRoles] = useState<{ id: number; name: string }[]>([]);
@@ -705,10 +704,17 @@ function InviteUserForm({
     if (!org) return setError("Org ID required");
     if (!roleId) return setError("Select a role");
     if (!fullName.trim()) return setError("Full name required");
-    if (!phone.trim()) return setError("Phone required");
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(inviteEmail.trim()))
+      return setError("Enter a valid email");
+    const apiBase = (import.meta.env.VITE_API_BASE_URL || "").replace(
+      /\/$/,
+      ""
+    );
+    const inviteEndpoint = `${apiBase}/api/org/invite`;
     setError(null);
     setSending(true);
-    const res = await fetch("/api/org/invite", {
+    const res = await fetch(apiBase ? inviteEndpoint : "/api/org/invite", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -719,7 +725,6 @@ function InviteUserForm({
         email: inviteEmail,
         role_id: Number(roleId),
         full_name: fullName,
-        phone,
       }),
     });
     const data = await res.json();
@@ -756,14 +761,6 @@ function InviteUserForm({
             <Input
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <Label>Phone</Label>
-            <Input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
               required
             />
           </div>

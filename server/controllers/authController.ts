@@ -47,7 +47,7 @@ const inviteBody = z.object({
   store_id: z.string().uuid().optional(),
   expires_in_hours: z.number().int().min(1).max(168).optional(),
   full_name: z.string().min(2),
-  phone: z.string().min(6),
+  phone: z.string().min(6).optional(),
 });
 const acceptInviteBody = z.object({
   token: z.string().min(16),
@@ -188,8 +188,17 @@ export async function orgInvite(req: Request, res: Response) {
     details: `email=${parsed.data.email}`,
   });
   // Build the invite link
-  const baseUrl = process.env.APP_BASE_URL || "http://localhost:5000";
-  const link = `${baseUrl}/invite/accept?token=${data.token}`;
+  const baseUrl =
+    process.env.FRONTEND_BASE_URL ||
+    process.env.CLIENT_APP_URL ||
+    process.env.APP_BASE_URL ||
+    "http://localhost:5000";
+  const invitePath = process.env.INVITE_ACCEPT_PATH || "/invite/accept";
+  const normalizedBase = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+  const normalizedPath = invitePath.startsWith("/")
+    ? invitePath
+    : `/${invitePath}`;
+  const link = `${normalizedBase}${normalizedPath}?token=${data.token}`;
 
   // Send email and SMS in parallel (non-blocking if services not configured)
   const sendPromises = [
@@ -199,13 +208,18 @@ export async function orgInvite(req: Request, res: Response) {
       link,
       "PantryPal"
     ).catch((err) => console.error("Email send error:", err.message)),
-    sendInviteSMS(
-      parsed.data.phone,
-      parsed.data.full_name,
-      link,
-      "PantryPal"
-    ).catch((err) => console.error("SMS send error:", err.message)),
   ];
+
+  if (parsed.data.phone) {
+    sendPromises.push(
+      sendInviteSMS(
+        parsed.data.phone,
+        parsed.data.full_name,
+        link,
+        "PantryPal"
+      ).catch((err) => console.error("SMS send error:", err.message))
+    );
+  }
 
   // Simulate verification delay (5 seconds) while messages are being sent
   await Promise.all([
@@ -216,7 +230,9 @@ export async function orgInvite(req: Request, res: Response) {
   return res.status(201).json({
     invite: data.invite,
     link,
-    message: "Invitation sent via email and SMS",
+    message: parsed.data.phone
+      ? "Invitation sent via email and SMS"
+      : "Invitation sent via email",
   });
 }
 
