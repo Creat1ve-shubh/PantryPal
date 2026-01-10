@@ -3,8 +3,8 @@ import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser"; // only for types here; middleware is applied in index
 import { z } from "zod";
 import { db } from "../db";
-import { audit_logs, roles as rolesTable } from "../../shared/schema";
-import { eq } from "drizzle-orm";
+import { audit_logs, roles as rolesTable, user_invites, roles } from "../../shared/schema";
+import { eq, and, isNull, gt, desc } from "drizzle-orm";
 import {
   signup as svcSignup,
   login as svcLogin,
@@ -243,4 +243,97 @@ export async function inviteAccept(req: Request, res: Response) {
     action: "invite:accept",
   });
   return res.json({ message: "Invite accepted", ...result });
+}
+
+export async function listPendingInvites(req: Request, res: Response) {
+  const ctx = req.ctx;
+  if (!ctx) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    // Get org_id from query or context
+    const orgId = (req.query.org_id as string) || ctx.orgId;
+    if (!orgId) return res.status(400).json({ error: "org_id required" });
+
+    // Fetch pending invites (not accepted, not expired)
+    const pending = await db
+      .select({
+        id: user_invites.id,
+        email: user_invites.email,
+        full_name: user_invites.full_name,
+        phone: user_invites.phone,
+        role_id: user_invites.role_id,
+        store_id: user_invites.store_id,
+        created_at: user_invites.created_at,
+        expires_at: user_invites.expires_at,
+        accepted_at: user_invites.accepted_at,
+        role_name: roles.name,
+      })
+      .from(user_invites)
+      .leftJoin(roles, eq(user_invites.role_id, roles.id))
+      .where(
+        and(
+          eq(user_invites.org_id, orgId as any),
+          isNull(user_invites.accepted_at),
+          gt(user_invites.expires_at, new Date())
+        )
+      )
+      .orderBy(desc(user_invites.created_at));
+
+    return res.json({ invites: pending });
+  } catch (e: any) {
+    console.error("List invites error:", e);
+    return res
+      .status(500)
+      .json({ error: e.message || "Failed to list invites" });
+  }
+}
+
+export async function withdrawInvite(req: Request, res: Response) {
+  const ctx = req.ctx;
+  if (!ctx) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    const inviteId = req.params.id as string;
+    if (!inviteId) return res.status(400).json({ error: "invite_id required" });
+
+    // Fetch the invite
+    const [invite] = await db
+      .select()
+      .from(user_invites)
+      .where(eq(user_invites.id, inviteId))
+      .limit(1);
+
+    if (!invite) return res.status(404).json({ error: "Invite not found" });
+
+    // Check if already accepted
+    if (invite.accepted_at) {
+      return res.status(400).json({ error: "Cannot withdraw accepted invite" });
+    }
+
+    // Verify org scope - user must be in the same org
+    if (ctx.orgId && ctx.orgId !== invite.org_id) {
+      return res.status(403).json({ error: "Forbidden: cross-org access" });
+    }
+
+    // Mark as expired (soft delete by setting expires_at to now)
+    await db
+      .update(user_invites)
+      .set({ expires_at: new Date() })
+      .where(eq(user_invites.id, inviteId));
+
+    // Log audit
+    await db.insert(audit_logs).values({
+      user_id: req.ctx?.userId as any,
+      org_id: invite.org_id,
+      action: "invite:withdraw",
+      details: `email=${invite.email}`,
+    });
+
+    return res.json({ message: "Invite withdrawn successfully" });
+  } catch (e: any) {
+    console.error("Withdraw invite error:", e);
+    return res
+      .status(500)
+      .json({ error: e.message || "Failed to withdraw invite" });
+  }
 }

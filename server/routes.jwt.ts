@@ -6,6 +6,8 @@ import {
   logout,
   orgInvite,
   inviteAccept,
+  listPendingInvites,
+  withdrawInvite,
   loginLimiter,
   refreshLimiter,
 } from "./controllers/authController";
@@ -28,6 +30,20 @@ export function registerJwtRoutes(app: Express) {
     orgInvite
   );
   app.post("/invite/accept", inviteAccept);
+  app.get(
+    "/org/invites/pending",
+    auth(),
+    loadPermissions(),
+    can("users:manage"),
+    listPendingInvites
+  );
+  app.delete(
+    "/org/invites/:id",
+    auth(),
+    loadPermissions(),
+    can("users:manage"),
+    withdrawInvite
+  );
 
   // RBAC helpers
   app.get(

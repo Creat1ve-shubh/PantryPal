@@ -664,10 +664,25 @@ function InviteUserForm({
   const [status, setStatus] = useState<
     "idle" | "validating" | "sending" | "success"
   >("idle");
+  const [pendingInvites, setPendingInvites] = useState<
+    Array<{
+      id: string;
+      email: string;
+      full_name?: string;
+      role_name: string;
+      created_at: string;
+      expires_at: string;
+    }>
+  >([]);
+  const [loadingInvites, setLoadingInvites] = useState(false);
 
   useEffect(() => {
     if (orgId && !org) setOrg(orgId);
   }, [orgId, org]);
+
+  useEffect(() => {
+    if (org) loadPendingInvites();
+  }, [org]);
 
   useEffect(() => {
     let ignore = false;
@@ -748,6 +763,9 @@ function InviteUserForm({
     setStatus("success");
     if (onSuccessLink) onSuccessLink(data.link);
 
+    // Reload pending invites
+    await loadPendingInvites();
+
     // Reset form after 2 seconds
     setTimeout(() => {
       setSending(false);
@@ -756,6 +774,55 @@ function InviteUserForm({
       setFullName("");
       setRoleId("");
     }, 2000);
+  };
+
+  const loadPendingInvites = async () => {
+    if (!org) return;
+    setLoadingInvites(true);
+    try {
+      const apiBase = (import.meta.env.VITE_API_BASE_URL || "").replace(
+        /\/$/,
+        ""
+      );
+      const endpoint = `${apiBase}/api/org/invites/pending?org_id=${org}`;
+      const res = await fetch(apiBase ? endpoint : `/api/org/invites/pending?org_id=${org}`, {
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (res.ok && data.invites) {
+        setPendingInvites(data.invites);
+      }
+    } catch (err) {
+      console.error("Failed to load pending invites:", err);
+    } finally {
+      setLoadingInvites(false);
+    }
+  };
+
+  const withdrawInvite = async (inviteId: string) => {
+    if (!confirm("Are you sure you want to withdraw this invite?")) return;
+
+    try {
+      const apiBase = (import.meta.env.VITE_API_BASE_URL || "").replace(
+        /\/$/,
+        ""
+      );
+      const endpoint = `${apiBase}/api/org/invites/${inviteId}`;
+      const res = await fetch(apiBase ? endpoint : `/api/org/invites/${inviteId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (res.ok) {
+        await loadPendingInvites();
+        setError(null);
+      } else {
+        const data = await res.json();
+        setError(data?.error || "Failed to withdraw invite");
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to withdraw invite");
+    }
   };
 
   return (
@@ -838,6 +905,37 @@ function InviteUserForm({
         </Button>
       </form>
       {error && <div className="text-red-600 text-sm">{error}</div>}
+
+      {/* Pending Invites Section */}
+      {pendingInvites.length > 0 && (
+        <div className="mt-6 pt-6 border-t">
+          <h3 className="text-sm font-semibold mb-3">
+            Pending Invites ({pendingInvites.length})
+          </h3>
+          <div className="space-y-2">
+            {pendingInvites.map((invite) => (
+              <div
+                key={invite.id}
+                className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md"
+              >
+                <div className="flex-1">
+                  <div className="text-sm font-medium">{invite.email}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {invite.full_name} • {invite.role_name} •{" "}
+                    {new Date(invite.created_at).toLocaleDateString()}
+                  </div>
+                </div>
+                <button
+                  onClick={() => withdrawInvite(invite.id)}
+                  className="text-xs px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
+                >
+                  Withdraw
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
